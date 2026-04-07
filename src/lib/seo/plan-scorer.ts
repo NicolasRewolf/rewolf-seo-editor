@@ -67,6 +67,13 @@ export function scorePlan(
   }
 
   const longTails = brief.longTailKeywords.map((x) => x.trim()).filter(Boolean);
+  const longTailCoverageThreshold = 0.7;
+  const covered =
+    longTails.length === 0
+      ? 1
+      : longTails.filter(
+          (lt) => tokenCoverage(planMarkdown, lt) >= longTailCoverageThreshold
+        ).length / longTails.length;
 
   const checks: PlanCheck[] = [];
 
