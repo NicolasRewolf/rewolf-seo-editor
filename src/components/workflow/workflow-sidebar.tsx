@@ -4,7 +4,6 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import { StepFinalize } from '@/components/workflow/steps/step-finalize';
 import { StepOutline } from '@/components/workflow/steps/step-outline';
-import { StepResearch } from '@/components/workflow/steps/step-research';
 import { StepWriting } from '@/components/workflow/steps/step-writing';
 import type { ArticleMeta } from '@/types/article';
 import type { InternalLinksMap } from '@/types/internal-links';
@@ -38,7 +37,6 @@ export function WorkflowSidebar(props: WorkflowSidebarProps) {
     step,
     meta,
     knowledgeBase,
-    onKnowledgeBaseChange,
     internalLinks,
     onInternalLinksChange,
     seoAnalysis,
@@ -47,7 +45,6 @@ export function WorkflowSidebar(props: WorkflowSidebarProps) {
     getMarkdown,
     getSelectionText,
     onMetaChange,
-    onCompetitorWords,
     headings,
     userPlainText,
     onSaveToDisk,
@@ -55,14 +52,7 @@ export function WorkflowSidebar(props: WorkflowSidebarProps) {
 
   switch (step) {
     case 'research':
-      return (
-        <StepResearch
-          meta={meta}
-          knowledgeBase={knowledgeBase}
-          onKnowledgeBaseChange={onKnowledgeBaseChange}
-          onCompetitorWords={onCompetitorWords}
-        />
-      );
+      return null;
     case 'outline':
       return (
         <StepOutline

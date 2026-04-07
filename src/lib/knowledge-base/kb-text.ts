@@ -33,7 +33,8 @@ export function buildKbContextBlock(kb: KnowledgeBase, maxChars: number): string
   return `${KB_BLOCK}\n${body}`;
 }
 
-const STOP = new Set([
+/** Stopwords FR (extraits pour excerpts + stats cluster). */
+export const KB_FRENCH_STOPWORDS = new Set([
   'pour',
   'avec',
   'dans',
@@ -57,7 +58,7 @@ export function kbExcerptForHeading(
     .toLowerCase()
     .split(/\s+/)
     .map((w) => w.replace(/[^a-zàâäéèêëïîôùûüÿçœæ0-9-]/gi, ''))
-    .filter((w) => w.length > 3 && !STOP.has(w));
+    .filter((w) => w.length > 3 && !KB_FRENCH_STOPWORDS.has(w));
   const uniq = [...new Set(words)];
   if (!uniq.length) {
     return concatKbSources(kb, maxChars);

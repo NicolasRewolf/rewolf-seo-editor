@@ -9,8 +9,8 @@ credentials/*.json
 # Local agent / IDE artifacts
 .claude/
 
-# Local data (exports, drafts, etc.)
-data/
+# Local data (exports, drafts, etc.) — racine du repo uniquement
+/data/
 
 # Dépendances & build
 node_modules/

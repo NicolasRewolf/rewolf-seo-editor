@@ -16,6 +16,7 @@ import { EditorKit } from '@/components/editor/editor-kit';
 import { EditorFloatingToolbar } from '@/components/editor/editor-floating-toolbar';
 import { EditorHeadingToolbar } from '@/components/editor/editor-heading-toolbar';
 import { MetaFields } from '@/components/seo/meta-fields';
+import { DataWorkspace } from '@/app/editor/data/DataWorkspace';
 import { WorkflowSidebar } from '@/components/workflow/workflow-sidebar';
 import { WorkflowStepper } from '@/components/workflow/workflow-stepper';
 import { Editor, EditorContainer } from '@/components/ui/editor';
@@ -26,6 +27,7 @@ import {
   type DiskArticlePayload,
 } from '@/lib/api/articles-disk';
 import { buildSeoPayload, plainTextFromValue } from '@/lib/seo/extract-structure';
+import { countWords } from '@/lib/knowledge-base/kb-helpers';
 import {
   loadStoredArticle,
   saveStoredArticle,
@@ -52,12 +54,6 @@ const defaultMeta = (): ArticleMeta => ({
 });
 
 const emptyKb = (): KnowledgeBase => ({ sources: [] });
-
-function countWords(text: string): number {
-  const t = text.trim();
-  if (!t) return 0;
-  return t.split(/\s+/).filter(Boolean).length;
-}
 
 export function SeoEditor() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -276,73 +272,89 @@ export function SeoEditor() {
         </div>
       </header>
 
-      <MetaFields meta={meta} onMetaChange={persistMeta} />
-
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          <Plate
-            editor={editor}
-            onValueChange={({ value }) => {
-              setDocValue(value);
-              setWordCount(countWords(plainTextFromValue(value as Descendant[])));
-              persistArticle(value);
-            }}
-          >
-            <div className="border-border flex flex-wrap items-center gap-2 border-b px-3 py-2">
-              <EditorHeadingToolbar />
-            </div>
-            <EditorContainer
-              variant="select"
-              className="min-h-[min(70vh,560px)] flex-1 rounded-none border-0"
-            >
-              <Editor
-                variant="default"
-                placeholder="Choisissez Texte / H1 / H2 / H3 au-dessus, ou tapez / pour le menu…"
-                className="min-h-[min(70vh,560px)]"
-              />
-            </EditorContainer>
-            <EditorFloatingToolbar />
-          </Plate>
-
-          <footer className="border-border bg-muted/30 text-muted-foreground flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-xs">
-            <span>
-              {wordCount} mot{wordCount > 1 ? 's' : ''}
-            </span>
-            <span>
-              Local (2 s) + API PUT data/articles/ si vous utilisez Enregistrer
-            </span>
-          </footer>
-        </div>
-
-        <div className="border-border flex min-h-0 min-w-0 flex-col border-t lg:h-full lg:w-[min(100%,440px)] lg:shrink-0 lg:border-t-0 lg:border-l">
+      {currentStep === 'research' ? (
+        <div className="flex min-h-0 flex-1 flex-col">
           <WorkflowStepper current={currentStep} onChange={setCurrentStep} />
-          <WorkflowSidebar
-            step={currentStep}
+          <DataWorkspace
             meta={meta}
             knowledgeBase={knowledgeBase}
             onKnowledgeBaseChange={setKnowledgeBase}
-            internalLinks={internalLinks}
-            onInternalLinksChange={setInternalLinks}
-            seoAnalysis={seoAnalysis}
-            editor={editor}
-            docValue={docValue}
-            getMarkdown={() => editor.getApi(MarkdownPlugin).markdown.serialize()}
-            getSelectionText={() => {
-              const { selection } = editor;
-              if (!selection || Range.isCollapsed(selection)) return '';
-              return SlateEditor.string(
-                editor as unknown as BaseEditor,
-                selection
-              );
-            }}
-            onMetaChange={persistMeta}
-            onCompetitorWords={onCompetitorBenchmark}
-            headings={seoPayload.headings}
-            userPlainText={seoPayload.plainText}
-            onSaveToDisk={handleSaveToDisk}
+            competitorWordCount={competitorWordCount}
+            onCompetitorBenchmark={onCompetitorBenchmark}
           />
         </div>
-      </div>
+      ) : (
+        <>
+          {currentStep === 'finalize' && (
+            <MetaFields meta={meta} onMetaChange={persistMeta} />
+          )}
+          <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+            <Plate
+              editor={editor}
+              onValueChange={({ value }) => {
+                setDocValue(value);
+                setWordCount(countWords(plainTextFromValue(value as Descendant[])));
+                persistArticle(value);
+              }}
+            >
+              <div className="border-border flex flex-wrap items-center gap-2 border-b px-3 py-2">
+                <EditorHeadingToolbar />
+              </div>
+              <EditorContainer
+                variant="select"
+                className="min-h-[min(70vh,560px)] flex-1 rounded-none border-0"
+              >
+                <Editor
+                  variant="default"
+                  placeholder="Choisissez Texte / H1 / H2 / H3 au-dessus, ou tapez / pour le menu…"
+                  className="min-h-[min(70vh,560px)]"
+                />
+              </EditorContainer>
+              <EditorFloatingToolbar />
+            </Plate>
+
+            <footer className="border-border bg-muted/30 text-muted-foreground flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-xs">
+              <span>
+                {wordCount} mot{wordCount > 1 ? 's' : ''}
+              </span>
+              <span>
+                Local (2 s) + API PUT data/articles/ si vous utilisez Enregistrer
+              </span>
+            </footer>
+          </div>
+
+          <div className="border-border flex min-h-0 min-w-0 flex-col border-t lg:h-full lg:w-[min(100%,440px)] lg:shrink-0 lg:border-t-0 lg:border-l">
+            <WorkflowStepper current={currentStep} onChange={setCurrentStep} />
+            <WorkflowSidebar
+              step={currentStep}
+              meta={meta}
+              knowledgeBase={knowledgeBase}
+              onKnowledgeBaseChange={setKnowledgeBase}
+              internalLinks={internalLinks}
+              onInternalLinksChange={setInternalLinks}
+              seoAnalysis={seoAnalysis}
+              editor={editor}
+              docValue={docValue}
+              getMarkdown={() => editor.getApi(MarkdownPlugin).markdown.serialize()}
+              getSelectionText={() => {
+                const { selection } = editor;
+                if (!selection || Range.isCollapsed(selection)) return '';
+                return SlateEditor.string(
+                  editor as unknown as BaseEditor,
+                  selection
+                );
+              }}
+              onMetaChange={persistMeta}
+              onCompetitorWords={onCompetitorBenchmark}
+              headings={seoPayload.headings}
+              userPlainText={seoPayload.plainText}
+              onSaveToDisk={handleSaveToDisk}
+            />
+          </div>
+        </div>
+        </>
+      )}
     </div>
   );
 }
