@@ -5,6 +5,31 @@ Principes : tâches atomiques, fichiers explicites, tests à chaque étape, comm
 
 ---
 
+## Suivi d'exécution (mis à jour)
+
+État global : **livré** sur `main` (commit `07beab2`), avec validation `lint + test + build` OK.
+
+| Tâche | Statut | Implémentation livrée |
+|---|---|---|
+| T1 | ✅ | `WritingSeoPanel` + `LiveScorePill` branchés dans Writing, panel SEO live sous « Sections (H2) ». |
+| T2 | ✅ | `KeywordHighlightKit` (focus/longtail), classes `kw-focus` / `kw-longtail`, câblage éditeur + tests exact/accents/casse. |
+| T3 | ✅ | `stemFr()` + `countPhraseInTextStemmed()`, densité `kw-density` stemmée, tests dédiés. |
+| T4 | ✅ | `lixScoreFr()` ajouté, critère lisibilité hybride FK/LIX, détail affiché + tests. |
+| T5 | ✅ | Toggle `Mode insertion directe` (défaut ON), génération section via Plate AI inline, fallback `<pre>` conservé. |
+| T6 | ✅ | Prompts `SEO_FAQ_PROMPT`, `SEO_INTRO_PROMPT`, `SEO_HEADLINE_VARIANTS_PROMPT`, `SEO_ALT_TEXT_PROMPT` + bloc « Raccourcis rédaction ». |
+| T7 | ✅ | `missing-terms-widget.tsx` en Writing + worker dédié `tfidf.worker.ts` + hook debounce 800 ms. |
+| T8 | ✅ | `headingsWithWordOffsets` exposé, vrai calcul d'intervalles 150–350 mots dans `structure.ts` + messages actionnables + tests. |
+| T9 | ✅ | Export HTML enrichi (`canonical`, OG, Twitter, JSON-LD), propagation JSON-LD finalize → export + tests. |
+| T10 | ✅ | Historique IndexedDB (`history-store.ts`), snapshots auto + IA, `HistoryDialog` (liste/restauration/purge >20). |
+
+### Notes d'implémentation
+
+- Les milestones A/B/C du plan sont couvertes fonctionnellement.
+- Le warning Vite sur `esbuild` (plugin `react-swc`) reste un point de maintenance indépendant.
+- Les livrables ont été intégrés sans changer le workflow principal Research → Brief → Outline → Writing → Finalize.
+
+---
+
 ## 0. Règles globales — à créer dans `.cursorrules` (racine du projet)
 
 ```
