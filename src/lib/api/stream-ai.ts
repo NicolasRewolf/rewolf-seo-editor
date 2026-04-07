@@ -61,6 +61,10 @@ export async function streamAiChat(options: StreamAiOptions): Promise<void> {
     } catch {
       /* ignore */
     }
+    if (res.status === 502) {
+      msg +=
+        ' — Vérifiez que l’API tourne (`npm run server` sur le port 8787). En dev les appels vont en direct vers 127.0.0.1:8787.';
+    }
     throw new Error(msg);
   }
 

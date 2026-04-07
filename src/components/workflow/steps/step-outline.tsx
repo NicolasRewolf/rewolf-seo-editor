@@ -18,7 +18,8 @@ import type { PlateEditor } from 'platejs/react';
 import type { ArticleBrief } from '@/types/article';
 import type { KnowledgeBase } from '@/types/knowledge-base';
 
-const KB_SUMMARY_MAX = 8000;
+/** Réduit la taille du POST plan pour limiter 502 / timeouts proxy & API. */
+const KB_SUMMARY_MAX = 6000;
 const SCORE_WARN_THRESHOLD = 70;
 
 type StepOutlineProps = {
