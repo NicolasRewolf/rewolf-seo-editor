@@ -87,13 +87,13 @@ export function StepBrief({
         <h2 className="text-foreground text-sm font-semibold">Brief éditorial</h2>
         <p className="text-muted-foreground mt-1 text-xs">
           Définissez l’intention, l’audience et la longue traîne avant de générer le
-          plan. Le mot-clé principal est saisi à l’étape Data.
+          plan. Le mot-clé est aussi modifiable à l’étape Data.
         </p>
       </div>
 
       <div className="space-y-1.5">
         <label className="text-foreground text-sm font-medium">
-          Mot-clé principal (rappel)
+          Mot-clé principal
         </label>
         <Input
           value={brief.focusKeyword}
@@ -101,6 +101,9 @@ export function StepBrief({
           placeholder="ex. avocat droit du travail"
           className="text-sm"
         />
+        <p className="text-muted-foreground text-xs">
+          Également modifiable à l’étape Data.
+        </p>
       </div>
 
       <fieldset className="space-y-2">

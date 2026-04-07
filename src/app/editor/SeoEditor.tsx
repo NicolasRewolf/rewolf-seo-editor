@@ -405,6 +405,9 @@ export function SeoEditor() {
           <WorkflowStepper current={currentStep} onChange={setCurrentStep} />
           <DataWorkspace
             brief={brief}
+            onBriefChange={(patch) =>
+              persistBrief({ ...briefRef.current, ...patch })
+            }
             knowledgeBase={knowledgeBase}
             onKnowledgeBaseChange={setKnowledgeBase}
             competitorWordCount={competitorWordCount}
