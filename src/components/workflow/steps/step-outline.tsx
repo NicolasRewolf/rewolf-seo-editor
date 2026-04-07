@@ -59,6 +59,9 @@ export function StepOutline({
 
   const [planDraft, setPlanDraft] = useState('');
 
+  const briefIncomplete =
+    !brief.focusKeyword.trim() || !brief.searchIntent;
+
   const runOutline = useCallback(() => {
     if (!brief.focusKeyword.trim()) {
       toast.error(
@@ -152,6 +155,12 @@ export function StepOutline({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-3">
+      {briefIncomplete && (
+        <div className="border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200 rounded-md border px-3 py-2 text-xs">
+          Brief incomplet — complétez le mot-clé principal et l&apos;intention de
+          recherche à l&apos;étape Brief.
+        </div>
+      )}
       <OutlineGenerator
         focusKeyword={brief.focusKeyword}
         knowledgeBase={knowledgeBase}
@@ -161,6 +170,7 @@ export function StepOutline({
         onGenerate={runOutline}
         onStop={stop}
         error={error}
+        generateDisabled={briefIncomplete}
       />
       <OutlinePreview
         output={output}
@@ -172,6 +182,7 @@ export function StepOutline({
         canInsert={canInsert}
         planScore={planScore}
         scoreWarnThreshold={SCORE_WARN_THRESHOLD}
+        regenerateDisabled={briefIncomplete}
       />
     </div>
   );

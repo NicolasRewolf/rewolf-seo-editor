@@ -339,7 +339,11 @@ export function SeoEditor() {
         </div>
 
         <div className="border-border flex min-h-0 min-w-0 flex-col border-t lg:h-full lg:w-[min(100%,440px)] lg:shrink-0 lg:border-t-0 lg:border-l">
-          <WorkflowStepper current={currentStep} onChange={setCurrentStep} />
+          <WorkflowStepper
+            current={currentStep}
+            onChange={setCurrentStep}
+            brief={brief}
+          />
           <WorkflowSidebar
             step={currentStep}
             meta={meta}
@@ -402,7 +406,11 @@ export function SeoEditor() {
 
       {currentStep === 'research' ? (
         <div className="flex min-h-0 flex-1 flex-col">
-          <WorkflowStepper current={currentStep} onChange={setCurrentStep} />
+          <WorkflowStepper
+            current={currentStep}
+            onChange={setCurrentStep}
+            brief={brief}
+          />
           <DataWorkspace
             brief={brief}
             onBriefChange={(patch) =>
@@ -416,7 +424,11 @@ export function SeoEditor() {
         </div>
       ) : currentStep === 'brief' ? (
         <div className="flex min-h-0 flex-1 flex-col">
-          <WorkflowStepper current={currentStep} onChange={setCurrentStep} />
+          <WorkflowStepper
+            current={currentStep}
+            onChange={setCurrentStep}
+            brief={brief}
+          />
           <StepBrief
             brief={brief}
             onBriefChange={persistBrief}

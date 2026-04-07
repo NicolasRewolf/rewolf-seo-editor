@@ -62,6 +62,10 @@ export function StepBrief({
     [brief.longTailKeywords]
   );
 
+  const missing: string[] = [];
+  if (!brief.focusKeyword.trim()) missing.push('mot-clé principal');
+  if (!brief.searchIntent) missing.push('intention de recherche');
+
   function setLongTailFromText(raw: string) {
     const next = raw
       .split(/[\n,]+/)
@@ -83,6 +87,12 @@ export function StepBrief({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-3 py-4">
+      {missing.length > 0 && (
+        <div className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-xs">
+          Brief incomplet : {missing.join(', ')}. Ces champs sont requis pour générer le
+          plan.
+        </div>
+      )}
       <div>
         <h2 className="text-foreground text-sm font-semibold">Brief éditorial</h2>
         <p className="text-muted-foreground mt-1 text-xs">
@@ -93,7 +103,10 @@ export function StepBrief({
 
       <div className="space-y-1.5">
         <label className="text-foreground text-sm font-medium">
-          Mot-clé principal
+          Mot-clé principal{' '}
+          <span className="text-destructive" aria-hidden>
+            *
+          </span>
         </label>
         <Input
           value={brief.focusKeyword}
@@ -108,7 +121,10 @@ export function StepBrief({
 
       <fieldset className="space-y-2">
         <legend className="text-foreground mb-1 text-sm font-medium">
-          Intention de recherche
+          Intention de recherche{' '}
+          <span className="text-destructive" aria-hidden>
+            *
+          </span>
         </legend>
         <div className="flex flex-wrap gap-1">
           {INTENTS.map((x) => (

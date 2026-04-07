@@ -19,6 +19,7 @@ type OutlinePreviewProps = {
   canInsert: boolean;
   planScore: PlanScore | null;
   scoreWarnThreshold: number;
+  regenerateDisabled?: boolean;
 };
 
 export function OutlinePreview({
@@ -31,6 +32,7 @@ export function OutlinePreview({
   canInsert,
   planScore,
   scoreWarnThreshold,
+  regenerateDisabled = false,
 }: OutlinePreviewProps) {
   const textToCopy = loading ? output : draft;
   const lowScore =
@@ -57,7 +59,7 @@ export function OutlinePreview({
           type="button"
           variant="secondary"
           size="sm"
-          disabled={loading}
+          disabled={loading || regenerateDisabled}
           onClick={onRegenerate}
         >
           Régénérer

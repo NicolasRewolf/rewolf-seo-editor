@@ -16,6 +16,8 @@ type OutlineGeneratorProps = {
   onGenerate: () => void;
   onStop: () => void;
   error: string | null;
+  /** Brief incomplet : désactive la génération (bouton grisé). */
+  generateDisabled?: boolean;
 };
 
 export function OutlineGenerator({
@@ -27,6 +29,7 @@ export function OutlineGenerator({
   onGenerate,
   onStop,
   error,
+  generateDisabled = false,
 }: OutlineGeneratorProps) {
   const kbStats = useMemo(() => {
     const n = knowledgeBase.sources.length;
@@ -81,7 +84,7 @@ export function OutlineGenerator({
           type="button"
           size="sm"
           className="gap-2"
-          disabled={loading}
+          disabled={loading || generateDisabled}
           onClick={onGenerate}
         >
           {loading ? (
