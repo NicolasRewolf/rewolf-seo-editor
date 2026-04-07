@@ -48,6 +48,7 @@ export function DataWorkspace({
         open={addOpen}
         onOpenChange={setAddOpen}
         meta={meta}
+        knowledgeBase={knowledgeBase}
         onKnowledgeBaseChange={onKnowledgeBaseChange}
         onCompetitorWords={onCompetitorBenchmark}
       />

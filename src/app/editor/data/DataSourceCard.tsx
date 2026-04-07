@@ -1,6 +1,7 @@
 'use client';
 
 import { Trash2Icon } from 'lucide-react';
+import type { KeyboardEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -33,19 +34,33 @@ export function DataSourceCard({
   onSelect,
   onDelete,
 }: DataSourceCardProps) {
+  function onRowKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect();
+    }
+  }
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={onRowKeyDown}
+      aria-pressed={selected}
+      aria-label={`Source ${TYPE_LABEL[source.type]} : ${source.label}`}
       className={cn(
-        'group border-border hover:bg-muted/50 relative flex w-full flex-col gap-1 rounded-md border px-2 py-2 text-left transition-colors',
+        'group border-border hover:bg-muted/50 relative flex w-full cursor-pointer flex-col gap-1 rounded-md border px-2 py-2 text-left transition-colors outline-none',
+        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         selected && 'border-primary bg-muted/40 ring-1 ring-primary/30'
       )}
     >
       <div className="flex items-start justify-between gap-2">
+        {/* Pastille = étiquette de type uniquement (non interactive, pas un 2e bouton) */}
         <span
+          aria-hidden
           className={cn(
-            'inline-flex shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',
+            'pointer-events-none inline-flex shrink-0 select-none rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',
             TYPE_CLASS[source.type]
           )}
         >
@@ -55,12 +70,16 @@ export function DataSourceCard({
           type="button"
           variant="ghost"
           size="icon-sm"
-          className="text-muted-foreground hover:text-destructive -mr-1 -mt-1 size-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+          className={cn(
+            'text-muted-foreground hover:text-destructive -mr-1 -mt-1 size-7 shrink-0',
+            'opacity-50 hover:opacity-100'
+          )}
           onClick={(e) => {
             e.stopPropagation();
             onDelete();
           }}
-          title="Supprimer"
+          title="Supprimer cette source"
+          aria-label={`Supprimer ${source.label}`}
         >
           <Trash2Icon className="size-3.5" />
         </Button>
@@ -69,6 +88,6 @@ export function DataSourceCard({
       <p className="text-muted-foreground font-mono text-[10px]">
         {source.wordCount} mots
       </p>
-    </button>
+    </div>
   );
 }

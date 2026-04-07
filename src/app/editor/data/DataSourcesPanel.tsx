@@ -80,28 +80,53 @@ export function DataSourcesPanel({
           <PlusIcon className="size-4" />
           Ajouter une source
         </Button>
-        <div className="flex flex-wrap gap-1">
-          {FILTERS.map((f) => (
-            <Button
-              key={f.id}
-              type="button"
-              size="sm"
-              variant={filter === f.id ? 'default' : 'outline'}
-              className="h-7 px-2 text-xs"
-              onClick={() => setFilter(f.id)}
-            >
-              {f.label}
-            </Button>
-          ))}
+
+        {/* Filtres : style segmenté neutre — pas les mêmes pastilles colorées que le type sur chaque carte */}
+        <div className="space-y-1.5">
+          <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+            Filtrer par type
+          </p>
+          <div
+            className="bg-muted/40 flex flex-wrap gap-0.5 rounded-lg border border-border/80 p-0.5"
+            role="group"
+            aria-label="Filtrer les sources par type"
+          >
+            {FILTERS.map((f) => {
+              const active = filter === f.id;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setFilter(f.id)}
+                  className={cn(
+                    'rounded-md px-2 py-1 text-xs font-medium transition-colors',
+                    active
+                      ? 'bg-background text-foreground shadow-sm ring-1 ring-border'
+                      : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                  )}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <div className="relative">
-          <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Rechercher…"
-            className="h-9 pl-8 text-sm"
-          />
+
+        <div className="space-y-1.5">
+          <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+            Recherche
+          </p>
+          <div className="relative">
+            <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Libellé ou extrait…"
+              className="h-9 pl-8 text-sm"
+              aria-label="Filtrer la liste par texte"
+            />
+          </div>
         </div>
       </div>
 

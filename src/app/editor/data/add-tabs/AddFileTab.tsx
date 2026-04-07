@@ -73,7 +73,7 @@ export function AddFileTab({ onAdd }: AddFileTabProps) {
   );
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
       <p className="text-muted-foreground text-xs">
         Fichiers .txt, .md ou .json — vous pouvez en déposer plusieurs.
       </p>

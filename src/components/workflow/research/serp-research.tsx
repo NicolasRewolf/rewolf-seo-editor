@@ -1,43 +1,33 @@
 'use client';
 
-import { Loader2Icon, PlusIcon, SearchIcon } from 'lucide-react';
-import { useCallback, useState, type Dispatch, type SetStateAction } from 'react';
+import { CheckIcon, Loader2Icon, PlusIcon, SearchIcon } from 'lucide-react';
+import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { fetchReaderContent } from '@/lib/api/reader-fetch';
 import { searchSerp, type SerpOrganicItem } from '@/lib/api/serp-search';
+import {
+  countWords,
+  makeSerpSource,
+  normalizeSourceUrl,
+  normalizedSourceUrlsFromSources,
+} from '@/lib/knowledge-base/kb-helpers';
 import type { ArticleMeta } from '@/types/article';
 import type { KbSource, KnowledgeBase } from '@/types/knowledge-base';
 
-function countWords(text: string): number {
-  const t = text.trim();
-  if (!t) return 0;
-  return t.split(/\s+/).filter(Boolean).length;
-}
-
-function makeSerpSource(url: string, title: string, content: string): KbSource {
-  const label = title.length > 60 ? `${title.slice(0, 57)}…` : title;
-  return {
-    id: crypto.randomUUID(),
-    type: 'serp',
-    label,
-    content,
-    wordCount: countWords(content),
-    addedAt: new Date().toISOString(),
-    url,
-  };
-}
-
 type SerpResearchProps = {
   meta: ArticleMeta;
+  knowledgeBase: KnowledgeBase;
   onChange: Dispatch<SetStateAction<KnowledgeBase>>;
   onCompetitorWords?: (wordCount: number | undefined) => void;
 };
 
 export function SerpResearch({
   meta,
+  knowledgeBase,
   onChange,
   onCompetitorWords,
 }: SerpResearchProps) {
@@ -47,6 +37,18 @@ export function SerpResearch({
   const [organic, setOrganic] = useState<SerpOrganicItem[]>([]);
   const [addingUrl, setAddingUrl] = useState<string | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
+
+  const existingSourceUrls = useMemo(
+    () => normalizedSourceUrlsFromSources(knowledgeBase.sources),
+    [knowledgeBase.sources]
+  );
+
+  const top5NewCount = useMemo(() => {
+    const top = organic.slice(0, 5).filter((o) => o.link);
+    return top.filter(
+      (o) => !existingSourceUrls.has(normalizeSourceUrl(o.link!))
+    ).length;
+  }, [organic, existingSourceUrls]);
 
   const addSource = useCallback(
     (src: KbSource) => {
@@ -77,6 +79,10 @@ export function SerpResearch({
   function addOne(item: SerpOrganicItem) {
     const url = item.link ?? '';
     if (!url) return;
+    if (existingSourceUrls.has(normalizeSourceUrl(url))) {
+      toast.message('Cette page est déjà dans la base');
+      return;
+    }
     setAddingUrl(url);
     setError(null);
     void (async () => {
@@ -102,8 +108,14 @@ export function SerpResearch({
   }
 
   function addTop5() {
-    const top = organic.slice(0, 5).filter((o) => o.link);
-    if (!top.length) return;
+    const top = organic
+      .slice(0, 5)
+      .filter((o) => o.link)
+      .filter((o) => !existingSourceUrls.has(normalizeSourceUrl(o.link!)));
+    if (!top.length) {
+      toast.message('Les résultats du top 5 sont déjà dans la base');
+      return;
+    }
     setBatchLoading(true);
     setError(null);
     void (async () => {
@@ -161,7 +173,7 @@ export function SerpResearch({
           {loading ? (
             <Loader2Icon className="size-4 animate-spin" aria-hidden />
           ) : (
-            <SearchIcon className="size-4" />
+            <SearchIcon className="size-4" aria-hidden />
           )}
           Voir
         </Button>
@@ -172,13 +184,20 @@ export function SerpResearch({
           size="sm"
           variant="secondary"
           className="w-full"
-          disabled={batchLoading || loading}
+          disabled={batchLoading || loading || top5NewCount === 0}
           onClick={addTop5}
+          title={
+            top5NewCount === 0
+              ? 'Aucune URL nouvelle dans le top 5'
+              : `Ajouter ${top5NewCount} source(s) pas encore en base`
+          }
         >
           {batchLoading ? (
             <Loader2Icon className="size-4 animate-spin" />
+          ) : top5NewCount === 0 ? (
+            'Top 5 déjà dans la base'
           ) : (
-            'Ajouter le top 5'
+            `Ajouter le top 5 (${top5NewCount} nouvelle${top5NewCount > 1 ? 's' : ''})`
           )}
         </Button>
       )}
@@ -199,6 +218,9 @@ export function SerpResearch({
             {organic.map((item, i) => {
               const url = item.link ?? '';
               const title = item.title ?? '(sans titre)';
+              const alreadyInBase = Boolean(
+                url && existingSourceUrls.has(normalizeSourceUrl(url))
+              );
               return (
                 <li key={`${url}-${i}`} className="border-border flex flex-col gap-1 border-b py-2 last:border-b-0">
                   {url ? (
@@ -224,18 +246,31 @@ export function SerpResearch({
                   {url ? (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant={alreadyInBase ? 'secondary' : 'outline'}
                       size="sm"
-                      className="mt-1 h-7 w-fit gap-1 text-xs"
-                      disabled={addingUrl === url || batchLoading}
+                      className={cn(
+                        'mt-1 h-7 w-fit gap-1 text-xs',
+                        alreadyInBase &&
+                          'border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200'
+                      )}
+                      disabled={
+                        alreadyInBase || addingUrl === url || batchLoading
+                      }
                       onClick={() => addOne(item)}
+                      aria-label={
+                        alreadyInBase
+                          ? 'Déjà ajouté à la base'
+                          : 'Ajouter à la base'
+                      }
                     >
                       {addingUrl === url ? (
                         <Loader2Icon className="size-3.5 animate-spin" />
+                      ) : alreadyInBase ? (
+                        <CheckIcon className="size-3.5" aria-hidden />
                       ) : (
-                        <PlusIcon className="size-3.5" />
+                        <PlusIcon className="size-3.5" aria-hidden />
                       )}
-                      Ajouter à la base
+                      {alreadyInBase ? 'Ajouté' : 'Ajouter à la base'}
                     </Button>
                   ) : null}
                 </li>

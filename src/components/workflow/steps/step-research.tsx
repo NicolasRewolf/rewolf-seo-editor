@@ -34,6 +34,7 @@ export function StepResearch({
       <section>
         <SerpResearch
           meta={meta}
+          knowledgeBase={knowledgeBase}
           onChange={onKnowledgeBaseChange}
           onCompetitorWords={onCompetitorWords}
         />

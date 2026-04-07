@@ -1,25 +1,33 @@
 'use client';
 
-import { Loader2Icon, PlusIcon, SearchIcon } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { CheckIcon, Loader2Icon, PlusIcon, SearchIcon } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { fetchReaderContent } from '@/lib/api/reader-fetch';
 import { searchSerp, type SerpOrganicItem } from '@/lib/api/serp-search';
-import { countWords, makeSerpSource } from '@/lib/knowledge-base/kb-helpers';
+import {
+  countWords,
+  makeSerpSource,
+  normalizeSourceUrl,
+} from '@/lib/knowledge-base/kb-helpers';
 import type { ArticleMeta } from '@/types/article';
 import type { KbSource } from '@/types/knowledge-base';
 
 type AddSerpTabProps = {
   meta: ArticleMeta;
+  /** URLs déjà présentes dans la base (clés normalisées). */
+  existingSourceUrls: ReadonlySet<string>;
   onAdd: (sources: KbSource[]) => void;
   onCompetitorWords?: (wordCount: number | undefined) => void;
 };
 
 export function AddSerpTab({
   meta,
+  existingSourceUrls,
   onAdd,
   onCompetitorWords,
 }: AddSerpTabProps) {
@@ -29,6 +37,13 @@ export function AddSerpTab({
   const [organic, setOrganic] = useState<SerpOrganicItem[]>([]);
   const [addingUrl, setAddingUrl] = useState<string | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
+
+  const top5NewCount = useMemo(() => {
+    const top = organic.slice(0, 5).filter((o) => o.link);
+    return top.filter(
+      (o) => !existingSourceUrls.has(normalizeSourceUrl(o.link!))
+    ).length;
+  }, [organic, existingSourceUrls]);
 
   const run = useCallback(async () => {
     const query = q.trim();
@@ -52,6 +67,10 @@ export function AddSerpTab({
   function addOne(item: SerpOrganicItem) {
     const url = item.link ?? '';
     if (!url) return;
+    if (existingSourceUrls.has(normalizeSourceUrl(url))) {
+      toast.message('Cette page est déjà dans la base');
+      return;
+    }
     setAddingUrl(url);
     setError(null);
     void (async () => {
@@ -73,8 +92,14 @@ export function AddSerpTab({
   }
 
   function addTop5() {
-    const top = organic.slice(0, 5).filter((o) => o.link);
-    if (!top.length) return;
+    const top = organic
+      .slice(0, 5)
+      .filter((o) => o.link)
+      .filter((o) => !existingSourceUrls.has(normalizeSourceUrl(o.link!)));
+    if (!top.length) {
+      toast.message('Les résultats du top 5 sont déjà dans la base');
+      return;
+    }
     setBatchLoading(true);
     setError(null);
     void (async () => {
@@ -105,16 +130,16 @@ export function AddSerpTab({
   }
 
   return (
-    <div className="space-y-3">
-      <p className="text-muted-foreground text-xs">
+    <div className="min-w-0 space-y-3">
+      <p className="text-muted-foreground text-xs break-words">
         Résultats organiques Google — le texte des pages est extrait via Reader (concurrents).
       </p>
-      <div className="flex gap-2">
+      <div className="flex min-w-0 gap-2">
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Requête Google…"
-          className="h-8 text-sm"
+          className="h-8 min-w-0 flex-1 text-sm"
           onKeyDown={(e) => {
             if (e.key === 'Enter') void run();
           }}
@@ -139,19 +164,26 @@ export function AddSerpTab({
           type="button"
           size="sm"
           variant="secondary"
-          className="w-full"
-          disabled={batchLoading || loading}
+          className="h-auto min-h-8 w-full whitespace-normal px-2 py-1.5 text-center leading-snug"
+          disabled={batchLoading || loading || top5NewCount === 0}
           onClick={addTop5}
+          title={
+            top5NewCount === 0
+              ? 'Aucune URL nouvelle dans le top 5'
+              : `Ajouter ${top5NewCount} source(s) pas encore en base`
+          }
         >
           {batchLoading ? (
             <Loader2Icon className="size-4 animate-spin" />
+          ) : top5NewCount === 0 ? (
+            'Top 5 déjà dans la base'
           ) : (
-            'Ajouter le top 5'
+            `Ajouter le top 5 (${top5NewCount} nouvelle${top5NewCount > 1 ? 's' : ''})`
           )}
         </Button>
       )}
 
-      <div className="max-h-[min(40vh,320px)] overflow-y-auto">
+      <div className="max-h-[min(40vh,320px)] min-w-0 overflow-x-hidden overflow-y-auto">
         {error && (
           <p className="text-destructive mb-2 text-sm" role="alert">
             {error}
@@ -167,17 +199,20 @@ export function AddSerpTab({
             {organic.map((item, i) => {
               const url = item.link ?? '';
               const title = item.title ?? '(sans titre)';
+              const alreadyInBase = Boolean(
+                url && existingSourceUrls.has(normalizeSourceUrl(url))
+              );
               return (
                 <li
                   key={`${url}-${i}`}
-                  className="border-border flex flex-col gap-1 border-b py-2 last:border-b-0"
+                  className="border-border flex min-w-0 flex-col gap-1 border-b py-2 last:border-b-0"
                 >
                   {url ? (
                     <a
                       href={url}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="text-foreground line-clamp-2 text-sm font-medium underline-offset-2 hover:underline"
+                      className="text-foreground line-clamp-2 min-w-0 break-words text-sm font-medium underline-offset-2 hover:underline"
                     >
                       {title}
                     </a>
@@ -195,18 +230,31 @@ export function AddSerpTab({
                   {url ? (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant={alreadyInBase ? 'secondary' : 'outline'}
                       size="sm"
-                      className="mt-1 h-7 w-fit gap-1 text-xs"
-                      disabled={addingUrl === url || batchLoading}
+                      className={cn(
+                        'mt-1 h-7 w-fit gap-1 text-xs',
+                        alreadyInBase &&
+                          'border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200'
+                      )}
+                      disabled={
+                        alreadyInBase || addingUrl === url || batchLoading
+                      }
                       onClick={() => addOne(item)}
+                      aria-label={
+                        alreadyInBase
+                          ? 'Déjà ajouté à la base'
+                          : 'Ajouter à la base'
+                      }
                     >
                       {addingUrl === url ? (
                         <Loader2Icon className="size-3.5 animate-spin" />
+                      ) : alreadyInBase ? (
+                        <CheckIcon className="size-3.5" aria-hidden />
                       ) : (
-                        <PlusIcon className="size-3.5" />
+                        <PlusIcon className="size-3.5" aria-hidden />
                       )}
-                      Ajouter à la base
+                      {alreadyInBase ? 'Ajouté' : 'Ajouter à la base'}
                     </Button>
                   ) : null}
                 </li>

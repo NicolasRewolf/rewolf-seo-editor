@@ -9,7 +9,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
+  // Même racine que le fichier de config (évite un .env introuvable si `cwd` ≠ projet).
+  const env = loadEnv(mode, __dirname, '')
   const apiProxyTarget =
     env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8787'
 

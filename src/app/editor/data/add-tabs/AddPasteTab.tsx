@@ -36,7 +36,7 @@ export function AddPasteTab({ onAdd }: AddPasteTabProps) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
       <p className="text-muted-foreground text-xs">
         Collez du texte brut (export, notes, etc.). Il sera ajouté comme source « Texte ».
       </p>

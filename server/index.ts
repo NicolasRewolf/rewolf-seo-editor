@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './load-env';
 
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
@@ -11,7 +11,22 @@ import { serpRoutes } from './routes/serp';
 
 const PORT = Number(process.env.PORT) || 8787;
 
+function envConfigured(name: string): boolean {
+  const v = process.env[name];
+  return typeof v === 'string' && v.trim().length > 0;
+}
+
 const app = new Hono();
+
+/** Racine HTTP : utile pour vérifier que le bon process écoute (sans /api). */
+app.get('/', (c) =>
+  c.json({
+    ok: true,
+    service: 'rewolf-seo-editor-api',
+    health: '/api/health',
+    port: PORT,
+  })
+);
 
 function isDevBrowserOrigin(origin: string): boolean {
   try {
@@ -39,7 +54,17 @@ app.use(
 );
 
 app.get('/api/health', (c) =>
-  c.json({ ok: true, service: 'rewolf-seo-editor-api', port: PORT })
+  c.json({
+    ok: true,
+    service: 'rewolf-seo-editor-api',
+    port: PORT,
+    /** Indique si une valeur non vide est chargée (sans jamais exposer la clé). */
+    env: {
+      SERPER_API_KEY: envConfigured('SERPER_API_KEY'),
+      ANTHROPIC_API_KEY: envConfigured('ANTHROPIC_API_KEY'),
+      OPENAI_API_KEY: envConfigured('OPENAI_API_KEY'),
+    },
+  })
 );
 
 app.route('/api/ai', aiRoutes);
@@ -55,7 +80,9 @@ const server = serve(
     port: PORT,
   },
   (info) => {
-    console.log(`[rewolf-api] http://127.0.0.1:${info.port}`);
+    console.log(
+      `[rewolf-api] écoute sur http://127.0.0.1:${info.port} — test : curl -s http://127.0.0.1:${info.port}/api/health`
+    );
   }
 );
 
