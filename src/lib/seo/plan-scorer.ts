@@ -1,3 +1,4 @@
+import { KB_FRENCH_STOPWORDS } from '@/lib/knowledge-base/kb-text';
 import type { ArticleBrief } from '@/types/article';
 import type { KbSource } from '@/types/knowledge-base';
 
@@ -25,6 +26,21 @@ function norm(s: string): string {
 function includesKw(haystack: string, kw: string): boolean {
   if (!kw.trim()) return false;
   return norm(haystack).includes(norm(kw));
+}
+
+function tokenizeForMatch(s: string): string[] {
+  return norm(s)
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 3 && !KB_FRENCH_STOPWORDS.has(t));
+}
+
+/** Ratio de tokens de `needle` présents dans `haystack` (0..1). */
+function tokenCoverage(haystack: string, needle: string): number {
+  const ht = new Set(tokenizeForMatch(haystack));
+  const nt = tokenizeForMatch(needle);
+  if (nt.length === 0) return 1;
+  const hits = nt.filter((t) => ht.has(t)).length;
+  return hits / nt.length;
 }
 
 /** Score heuristique du plan Markdown vs brief (0–100). */
@@ -89,12 +105,13 @@ export function scorePlan(
 
   checks.push({
     id: 'longtail',
-    label: 'Longue traîne couverte dans le plan',
-    passed:
-      longTails.length === 0
-        ? true
-        : longTails.every((lt) => includesKw(planMarkdown, lt)),
+    label: `Longue traîne couverte (${Math.round(covered * 100)}%)`,
+    passed: covered >= 0.8,
     weight: 16,
+    details:
+      longTails.length === 0
+        ? 'Aucune longue traîne définie'
+        : `${Math.round(covered * longTails.length)}/${longTails.length} expressions`,
   });
 
   checks.push({
