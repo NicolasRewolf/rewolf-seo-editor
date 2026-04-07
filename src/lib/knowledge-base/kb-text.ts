@@ -33,39 +33,22 @@ export function buildKbContextBlock(kb: KnowledgeBase, maxChars: number): string
   return `${KB_BLOCK}\n${body}`;
 }
 
-const DEFAULT_COMPETITOR_HEADINGS_MAX = 8000;
-/** Limite par source pour éviter une page concurrente de plusieurs centaines de titres. */
-const MAX_HEADINGS_PER_SOURCE = 48;
+const MAX_COMPETITOR_SOURCES = 8;
+const MAX_HEADINGS_PER_SOURCE = 15;
 
 /**
  * Liste lisible des H1–H3 par source (structures concurrentes).
- * Toujours tronquée à `maxTotalChars` pour éviter des POST /api/ai/stream trop lourds (502 / timeouts).
+ * Borné en nombre de sources et de titres pour limiter la taille du prompt plan.
  */
-export function formatCompetitorHeadings(
-  kb: KnowledgeBase,
-  maxTotalChars = DEFAULT_COMPETITOR_HEADINGS_MAX
-): string {
+export function formatCompetitorHeadings(kb: KnowledgeBase): string {
   const blocks: string[] = [];
-  let used = 0;
-  for (const s of kb.sources) {
-    const hh = s.headings;
-    if (!hh?.length) continue;
-    const slice = hh.slice(0, MAX_HEADINGS_PER_SOURCE);
-    const lines = slice.map((h) => `${'#'.repeat(h.level)} ${h.text}`);
-    let block = `### ${s.label}\n${lines.join('\n')}`;
-    if (hh.length > MAX_HEADINGS_PER_SOURCE) {
-      block += `\n[… ${hh.length - MAX_HEADINGS_PER_SOURCE} titres omis …]`;
-    }
-    const sep = blocks.length ? 2 : 0;
-    if (used + sep + block.length > maxTotalChars) {
-      const room = maxTotalChars - used - sep - 80;
-      if (room > 120) {
-        blocks.push(`${block.slice(0, room)}\n[… structures concurrentes tronquées …]`);
-      }
-      break;
-    }
-    blocks.push(block);
-    used += sep + block.length;
+  const sources = kb.sources
+    .filter((s) => s.headings && s.headings.length > 0)
+    .slice(0, MAX_COMPETITOR_SOURCES);
+  for (const s of sources) {
+    const hh = (s.headings ?? []).slice(0, MAX_HEADINGS_PER_SOURCE);
+    const lines = hh.map((h) => `${'#'.repeat(h.level)} ${h.text}`);
+    blocks.push(`### ${s.label}\n${lines.join('\n')}`);
   }
   return blocks.length
     ? blocks.join('\n\n')
