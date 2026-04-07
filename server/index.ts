@@ -29,11 +29,27 @@ app.get('/', (c) =>
 );
 
 function isDevBrowserOrigin(origin: string): boolean {
+  const isPrivateIpv4 = (hostname: string): boolean => {
+    const parts = hostname.split('.');
+    if (parts.length !== 4) return false;
+    const octets = parts.map((p) => Number(p));
+    if (octets.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) {
+      return false;
+    }
+    const [a, b] = octets;
+    return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+  };
+
   try {
     const u = new URL(origin);
+    const isHttp = u.protocol === 'http:' || u.protocol === 'https:';
+    if (!isHttp) return false;
+    const host = u.hostname.toLowerCase();
     return (
-      (u.hostname === 'localhost' || u.hostname === '127.0.0.1') &&
-      (u.protocol === 'http:' || u.protocol === 'https:')
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      isPrivateIpv4(host)
     );
   } catch {
     return false;
