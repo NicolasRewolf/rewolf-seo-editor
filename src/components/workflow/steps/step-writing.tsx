@@ -147,7 +147,7 @@ export function StepWriting({
         opts
       );
     },
-    [contextMessages, run, setError]
+    [contextMessages, run, setError, setOutput]
   );
 
   const parseHeadlineVariants = useCallback((text: string): string[] => {

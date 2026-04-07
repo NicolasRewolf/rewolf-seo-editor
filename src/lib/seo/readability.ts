@@ -1,5 +1,3 @@
-import readability from 'text-readability-ts';
-
 import type { SeoAnalysisPayload, SeoCriterion, SeoDimensionResult } from '@/types/seo';
 
 const TRANSITION_FR = [
@@ -58,13 +56,39 @@ export function lixScoreFr(text: string): {
   return { score, grade };
 }
 
+function estimateSyllables(word: string): number {
+  const w = word
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-z]/g, '');
+  if (!w) return 0;
+
+  // Approximation robuste FR/EN pour éviter dépendance CJS côté navigateur.
+  const groups = w.match(/[aeiouy]+/g) ?? [];
+  let count = groups.length;
+  if (w.endsWith('e') && count > 1) count -= 1;
+  if (w.endsWith('es') && count > 1) count -= 1;
+  if (w.endsWith('ent') && count > 1) count -= 1;
+  return Math.max(1, count);
+}
+
+function fleschKincaidGradeApprox(text: string): number {
+  const sentences = Math.max(splitSentences(text).length, 1);
+  const words = text.match(/[a-zA-ZÀ-ÿ0-9'-]+/g) ?? [];
+  const wordCount = words.length;
+  if (wordCount === 0) return 8;
+  const syllables = words.reduce((sum, word) => sum + estimateSyllables(word), 0);
+  return 0.39 * (wordCount / sentences) + 11.8 * (syllables / wordCount) - 15.59;
+}
+
 export function analyzeReadability(p: SeoAnalysisPayload): SeoDimensionResult {
   const text = p.plainText;
   const criteria: SeoCriterion[] = [];
 
   let fk = 8;
   try {
-    fk = readability.fleschKincaidGrade(text);
+    fk = fleschKincaidGradeApprox(text);
     if (Number.isNaN(fk)) fk = 8;
   } catch {
     fk = 8;
