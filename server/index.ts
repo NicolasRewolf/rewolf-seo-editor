@@ -5,7 +5,6 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
 import { aiRoutes } from './routes/ai';
-import { gscRoutes } from './routes/gsc';
 import { articlesRoutes } from './routes/articles';
 import { readerRoutes } from './routes/reader';
 import { serpRoutes } from './routes/serp';
@@ -47,7 +46,6 @@ app.route('/api/ai', aiRoutes);
 app.route('/api/articles', articlesRoutes);
 app.route('/api/serp', serpRoutes);
 app.route('/api/reader', readerRoutes);
-app.route('/api/gsc', gscRoutes);
 
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
 

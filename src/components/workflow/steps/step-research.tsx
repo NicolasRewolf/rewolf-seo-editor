@@ -1,6 +1,5 @@
 'use client';
 
-import { GscPanel } from '@/components/seo/gsc-panel';
 import { SerpResearch } from '@/components/workflow/research/serp-research';
 import { SourceImportZone } from '@/components/workflow/research/source-import-zone';
 import { SourceList } from '@/components/workflow/research/source-list';
@@ -38,9 +37,6 @@ export function StepResearch({
           onChange={onKnowledgeBaseChange}
           onCompetitorWords={onCompetitorWords}
         />
-      </section>
-      <section className="min-h-[200px]">
-        <GscPanel />
       </section>
     </div>
   );
