@@ -93,14 +93,20 @@ export function scorePlan(
     details: `${h2.length} H2`,
   });
 
+  const SNIPPET_STARTERS =
+    /^(qu['']est|définition|comment|pourquoi|en quoi|combien|qu['']est-ce que|quels|quelles|quand)/i;
+
   checks.push({
     id: 'first-h2-snippet',
     label: 'Premier H2 orienté réponse directe (snippet)',
-    passed: h2.length > 0
-      ? /^(qu['']est|définition|comment|pourquoi|en quoi|combien)/i.test(h2[0]) ||
-        h2[0].length <= 72
-      : false,
+    passed:
+      h2.length > 0 &&
+      SNIPPET_STARTERS.test(h2[0]) &&
+      h2[0].length <= 80,
     weight: 8,
+    details: h2[0]
+      ? `Premier H2 : "${h2[0].slice(0, 60)}${h2[0].length > 60 ? '…' : ''}"`
+      : 'Aucun H2 détecté',
   });
 
   checks.push({
