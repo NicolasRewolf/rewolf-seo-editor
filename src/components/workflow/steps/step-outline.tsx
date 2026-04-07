@@ -7,23 +7,29 @@ import { OutlineGenerator } from '@/components/workflow/outline/outline-generato
 import { OutlinePreview } from '@/components/workflow/outline/outline-preview';
 import { useAiAssistant } from '@/hooks/useAiAssistant';
 import { SEO_OUTLINE_FROM_KB_PROMPT } from '@/lib/ai/prompts/workflow';
-import { concatKbSources } from '@/lib/knowledge-base/kb-text';
+import { concatKbSources, formatCompetitorHeadings } from '@/lib/knowledge-base/kb-text';
+import {
+  collectCompetitorH2FromKb,
+  scorePlan,
+  type PlanScore,
+} from '@/lib/seo/plan-scorer';
 import { replaceEditorFromMarkdown } from '@/lib/plate/insert-markdown';
 import type { PlateEditor } from 'platejs/react';
-import type { ArticleMeta } from '@/types/article';
+import type { ArticleBrief } from '@/types/article';
 import type { KnowledgeBase } from '@/types/knowledge-base';
 
 const KB_SUMMARY_MAX = 8000;
+const SCORE_WARN_THRESHOLD = 70;
 
 type StepOutlineProps = {
-  meta: ArticleMeta;
+  brief: ArticleBrief;
   knowledgeBase: KnowledgeBase;
   editor: PlateEditor;
   getMarkdown: () => string;
 };
 
 export function StepOutline({
-  meta,
+  brief,
   knowledgeBase,
   editor,
   getMarkdown,
@@ -45,20 +51,47 @@ export function StepOutline({
     return raw || '(aucune source — ajoutez des sources à l’étape 1)';
   }, [knowledgeBase]);
 
+  const competitorH2 = useMemo(
+    () => collectCompetitorH2FromKb(knowledgeBase.sources),
+    [knowledgeBase.sources]
+  );
+
   const [planDraft, setPlanDraft] = useState('');
 
   const runOutline = useCallback(() => {
+    if (!brief.focusKeyword.trim()) {
+      toast.error(
+        'Renseignez un mot-clé principal à l’étape Brief avant de générer le plan.'
+      );
+      return;
+    }
+    if (!brief.searchIntent) {
+      toast.error(
+        'Choisissez une intention de recherche à l’étape Brief avant de générer le plan.'
+      );
+      return;
+    }
     setOutput('');
     setError(null);
     const userPrompt = [
-      `Mot-clé principal : ${meta.focusKeyword || '(non défini)'}`,
-      `Intention : déduire du mot-clé et des sources.`,
+      '--- BRIEF ---',
+      `Mot-clé principal : ${brief.focusKeyword}`,
+      `Longue traîne : ${brief.longTailKeywords.join(', ') || '(aucune)'}`,
+      `Intention : ${brief.searchIntent ?? '(non définie)'}`,
+      `Étape funnel : ${brief.funnelStage ?? '(non définie)'}`,
+      `Audience : ${brief.targetAudience || '(non définie)'}`,
+      `Destination : ${brief.destinationUrl || '(non définie)'}`,
+      `Voix de marque : ${brief.brandVoice || '(non définie)'}`,
+      `Objectif business : ${brief.businessGoal || '(non défini)'}`,
       '',
-      '--- Base de connaissances (extraits) ---',
+      '--- STRUCTURES CONCURRENTES ---',
+      formatCompetitorHeadings(knowledgeBase),
+      '',
+      '--- BASE DE CONNAISSANCES ---',
       kbSummary,
       '',
-      '--- Consigne ---',
-      'Propose un plan d\'article (H2 et H3) sous forme de Markdown. Pour chaque section, indique 2-3 points clés à couvrir. Base-toi sur les sources fournies.',
+      '--- CONSIGNE ---',
+      'Génère le plan en Markdown selon les règles du système.',
     ].join('\n');
 
     void run(
@@ -67,15 +100,35 @@ export function StepOutline({
         { role: 'user', content: userPrompt },
       ],
       undefined,
-      { onComplete: (text) => setPlanDraft(text) }
+      {
+        onComplete: (text) => {
+          setPlanDraft(text);
+        },
+      }
     );
-  }, [kbSummary, meta.focusKeyword, run, setError, setOutput]);
+  }, [brief, kbSummary, knowledgeBase, run, setError, setOutput]);
+
+  const planTextForScore = useMemo(
+    () => (planDraft.trim() || output.trim()),
+    [planDraft, output]
+  );
+
+  const planScore: PlanScore | null = useMemo(() => {
+    if (loading || !planTextForScore) return null;
+    return scorePlan(planTextForScore, brief, competitorH2);
+  }, [brief, competitorH2, loading, planTextForScore]);
 
   const insertPlan = useCallback(() => {
-    const md = (planDraft.trim() || output.trim());
+    const md = planDraft.trim() || output.trim();
     if (!md) {
       toast.error('Aucun plan à insérer');
       return;
+    }
+    if (planScore && planScore.overall < SCORE_WARN_THRESHOLD) {
+      const ok = window.confirm(
+        `Le score du plan est ${planScore.overall}/100 (seuil conseillé ${SCORE_WARN_THRESHOLD}). Insérer quand même dans l’éditeur ?`
+      );
+      if (!ok) return;
     }
     const current = getMarkdown().trim();
     if (current.length > 0) {
@@ -90,7 +143,7 @@ export function StepOutline({
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Insertion impossible');
     }
-  }, [editor, getMarkdown, output, planDraft]);
+  }, [editor, getMarkdown, output, planDraft, planScore]);
 
   const canInsert =
     !loading &&
@@ -99,7 +152,7 @@ export function StepOutline({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-3">
       <OutlineGenerator
-        meta={meta}
+        focusKeyword={brief.focusKeyword}
         knowledgeBase={knowledgeBase}
         provider={provider}
         onProviderChange={setProvider}
@@ -116,6 +169,8 @@ export function StepOutline({
         onRegenerate={runOutline}
         onInsert={insertPlan}
         canInsert={canInsert}
+        planScore={planScore}
+        scoreWarnThreshold={SCORE_WARN_THRESHOLD}
       />
     </div>
   );

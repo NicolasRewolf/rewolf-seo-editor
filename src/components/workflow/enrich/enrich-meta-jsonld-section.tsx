@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { aiGenerateObject } from '@/lib/api/ai-object';
 import type { AiProvider } from '@/lib/api/stream-ai';
 import { buildArticleContextBlock } from '@/lib/ai/article-context';
-import type { ArticleMeta } from '@/types/article';
+import type { ArticleBrief, ArticleMeta } from '@/types/article';
 
 type MetaScored = {
   titleVariants: Array<{
@@ -27,12 +27,14 @@ type MetaScored = {
 
 type EnrichMetaJsonldSectionProps = {
   meta: ArticleMeta;
+  brief: ArticleBrief;
   getMarkdown: () => string;
   onMetaChange: (m: ArticleMeta) => void;
 };
 
 export function EnrichMetaJsonldSection({
   meta,
+  brief,
   getMarkdown,
   onMetaChange,
 }: EnrichMetaJsonldSectionProps) {
@@ -46,7 +48,7 @@ export function EnrichMetaJsonldSection({
     setMetaObj(null);
     setMetaLoading(true);
     try {
-      const ctx = buildArticleContextBlock(meta, getMarkdown());
+      const ctx = buildArticleContextBlock(meta, brief, getMarkdown());
       const obj = (await aiGenerateObject(
         'meta-scored',
         ctx,
@@ -58,13 +60,13 @@ export function EnrichMetaJsonldSection({
     } finally {
       setMetaLoading(false);
     }
-  }, [getMarkdown, meta, provider]);
+  }, [brief, getMarkdown, meta, provider]);
 
   const runJsonLdBundle = useCallback(async () => {
     setJsonld(null);
     setJsonldLoading(true);
     try {
-      const ctx = buildArticleContextBlock(meta, getMarkdown());
+      const ctx = buildArticleContextBlock(meta, brief, getMarkdown());
       const obj = await aiGenerateObject('jsonld-bundle', ctx, provider);
       setJsonld(obj != null && typeof obj === 'object' ? obj : null);
     } catch (e) {
@@ -72,7 +74,7 @@ export function EnrichMetaJsonldSection({
     } finally {
       setJsonldLoading(false);
     }
-  }, [getMarkdown, meta, provider]);
+  }, [brief, getMarkdown, meta, provider]);
 
   async function copyJsonLd() {
     if (!jsonld) return;

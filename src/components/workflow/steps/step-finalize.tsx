@@ -11,7 +11,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import type { ArticleMeta } from '@/types/article';
+import type { ArticleBrief, ArticleMeta } from '@/types/article';
 import type { InternalLinksMap } from '@/types/internal-links';
 import type { KnowledgeBase } from '@/types/knowledge-base';
 import type { SeoAnalysisResult } from '@/types/seo';
@@ -19,6 +19,7 @@ import type { Value } from 'platejs';
 
 type StepFinalizeProps = {
   meta: ArticleMeta;
+  brief: ArticleBrief;
   knowledgeBase: KnowledgeBase;
   internalLinks: InternalLinksMap | null;
   onInternalLinksChange: (m: InternalLinksMap | null) => void;
@@ -32,6 +33,7 @@ type StepFinalizeProps = {
 
 export function StepFinalize({
   meta,
+  brief,
   knowledgeBase,
   internalLinks,
   onInternalLinksChange,
@@ -85,6 +87,7 @@ export function StepFinalize({
               </p>
               <EnrichLinksSection
                 meta={meta}
+                brief={brief}
                 internalLinks={internalLinks}
                 onInternalLinksChange={onInternalLinksChange}
                 getMarkdown={getMarkdown}
@@ -108,6 +111,7 @@ export function StepFinalize({
         >
           <EnrichMetaJsonldSection
             meta={meta}
+            brief={brief}
             getMarkdown={getMarkdown}
             onMetaChange={onMetaChange}
           />

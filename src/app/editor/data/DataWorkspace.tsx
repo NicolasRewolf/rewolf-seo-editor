@@ -5,11 +5,11 @@ import { useState, type Dispatch, type SetStateAction } from 'react';
 import { AddSourceDialog } from '@/app/editor/data/AddSourceDialog';
 import { DataInspectorPanel } from '@/app/editor/data/DataInspectorPanel';
 import { DataSourcesPanel } from '@/app/editor/data/DataSourcesPanel';
-import type { ArticleMeta } from '@/types/article';
+import type { ArticleBrief } from '@/types/article';
 import type { KnowledgeBase } from '@/types/knowledge-base';
 
 type DataWorkspaceProps = {
-  meta: ArticleMeta;
+  brief: ArticleBrief;
   knowledgeBase: KnowledgeBase;
   onKnowledgeBaseChange: Dispatch<SetStateAction<KnowledgeBase>>;
   competitorWordCount?: number;
@@ -17,7 +17,7 @@ type DataWorkspaceProps = {
 };
 
 export function DataWorkspace({
-  meta,
+  brief,
   knowledgeBase,
   onKnowledgeBaseChange,
   competitorWordCount,
@@ -38,7 +38,7 @@ export function DataWorkspace({
         />
         <DataInspectorPanel
           knowledgeBase={knowledgeBase}
-          meta={meta}
+          focusKeyword={brief.focusKeyword}
           selectedSourceId={selectedSourceId}
           onSelectSourceId={setSelectedSourceId}
           competitorWordCount={competitorWordCount}
@@ -47,7 +47,7 @@ export function DataWorkspace({
       <AddSourceDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        meta={meta}
+        focusKeyword={brief.focusKeyword}
         knowledgeBase={knowledgeBase}
         onKnowledgeBaseChange={onKnowledgeBaseChange}
         onCompetitorWords={onCompetitorBenchmark}

@@ -15,23 +15,22 @@ import {
   normalizeSourceUrl,
   normalizedSourceUrlsFromSources,
 } from '@/lib/knowledge-base/kb-helpers';
-import type { ArticleMeta } from '@/types/article';
 import type { KbSource, KnowledgeBase } from '@/types/knowledge-base';
 
 type SerpResearchProps = {
-  meta: ArticleMeta;
+  initialQuery: string;
   knowledgeBase: KnowledgeBase;
   onChange: Dispatch<SetStateAction<KnowledgeBase>>;
   onCompetitorWords?: (wordCount: number | undefined) => void;
 };
 
 export function SerpResearch({
-  meta,
+  initialQuery,
   knowledgeBase,
   onChange,
   onCompetitorWords,
 }: SerpResearchProps) {
-  const [q, setQ] = useState(meta.focusKeyword);
+  const [q, setQ] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [organic, setOrganic] = useState<SerpOrganicItem[]>([]);
@@ -87,7 +86,7 @@ export function SerpResearch({
     setError(null);
     void (async () => {
       try {
-        const text = await fetchReaderContent(url);
+        const text = await fetchReaderContent(url, { markdown: true });
         const wc = countWords(text);
         onCompetitorWords?.(wc > 0 ? wc : undefined);
         addSource(
@@ -122,7 +121,7 @@ export function SerpResearch({
       const results = await Promise.allSettled(
         top.map(async (item) => {
           const url = item.link!;
-          const text = await fetchReaderContent(url);
+          const text = await fetchReaderContent(url, { markdown: true });
           return makeSerpSource(url, item.title ?? url, text);
         })
       );

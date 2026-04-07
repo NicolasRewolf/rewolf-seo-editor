@@ -2,10 +2,12 @@ import { apiUrl } from '@/lib/api/base-url';
 
 export type FetchReaderOptions = {
   signal?: AbortSignal;
+  /** Si true, Jina renvoie du Markdown (titres # conservés pour analyse). */
+  markdown?: boolean;
 };
 
 /**
- * Texte Markdown/plain extrait via le proxy Jina (`GET /api/reader?url=`).
+ * Texte plain ou Markdown extrait via le proxy Jina (`GET /api/reader?url=`).
  */
 export async function fetchReaderContent(
   url: string,
@@ -16,10 +18,12 @@ export async function fetchReaderContent(
     throw new Error('URL vide');
   }
 
-  const res = await fetch(
-    `${apiUrl('/api/reader')}?${new URLSearchParams({ url: u })}`,
-    { signal: options?.signal }
-  );
+  const params = new URLSearchParams({ url: u });
+  if (options?.markdown) params.set('markdown', '1');
+
+  const res = await fetch(`${apiUrl('/api/reader')}?${params}`, {
+    signal: options?.signal,
+  });
 
   if (!res.ok) {
     let msg = `Erreur ${res.status}`;

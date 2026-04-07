@@ -5,12 +5,13 @@ import { InternalLinksSuggest } from '@/components/workflow/enrich/internal-link
 import { useAiAssistant } from '@/hooks/useAiAssistant';
 import { buildArticleContextBlock } from '@/lib/ai/article-context';
 import { SEO_INTERNAL_LINKS_PROMPT } from '@/lib/ai/prompts/workflow';
-import type { ArticleMeta } from '@/types/article';
+import type { ArticleBrief, ArticleMeta } from '@/types/article';
 import type { InternalLinksMap } from '@/types/internal-links';
 import { useCallback } from 'react';
 
 type EnrichLinksSectionProps = {
   meta: ArticleMeta;
+  brief: ArticleBrief;
   internalLinks: InternalLinksMap | null;
   onInternalLinksChange: (m: InternalLinksMap | null) => void;
   getMarkdown: () => string;
@@ -18,6 +19,7 @@ type EnrichLinksSectionProps = {
 
 export function EnrichLinksSection({
   meta,
+  brief,
   internalLinks,
   onInternalLinksChange,
   getMarkdown,
@@ -33,7 +35,7 @@ export function EnrichLinksSection({
   const runLinkSuggest = useCallback(() => {
     if (!internalLinks?.links.length) return;
     setLinkSuggestOut('');
-    const ctx = buildArticleContextBlock(meta, getMarkdown());
+    const ctx = buildArticleContextBlock(meta, brief, getMarkdown());
     const linksJson = JSON.stringify(internalLinks.links, null, 2);
     void runStream(
       [
@@ -45,7 +47,7 @@ export function EnrichLinksSection({
       ],
       'quality'
     );
-  }, [getMarkdown, internalLinks, meta, runStream, setLinkSuggestOut]);
+  }, [brief, getMarkdown, internalLinks, meta, runStream, setLinkSuggestOut]);
 
   return (
     <div className="space-y-4">

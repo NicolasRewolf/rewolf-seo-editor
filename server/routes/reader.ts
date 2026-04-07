@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 
-import { fetchJinaPlainText } from '../lib/jina';
+import { fetchJinaContent } from '../lib/jina';
 
 export const readerRoutes = new Hono();
 
@@ -10,7 +10,9 @@ readerRoutes.get('/', async (c) => {
     return c.json({ error: 'Paramètre url requis' }, 400);
   }
 
-  const result = await fetchJinaPlainText(url);
+  const md =
+    c.req.query('markdown') === '1' || c.req.query('markdown') === 'true';
+  const result = await fetchJinaContent(url, md ? 'markdown' : 'plain');
   if (!result.ok) {
     const isClient = result.error.startsWith('Jina ');
     return c.json(
@@ -20,6 +22,8 @@ readerRoutes.get('/', async (c) => {
   }
 
   return c.text(result.text, 200, {
-    'Content-Type': 'text/plain; charset=utf-8',
+    'Content-Type': md
+      ? 'text/markdown; charset=utf-8'
+      : 'text/plain; charset=utf-8',
   });
 });

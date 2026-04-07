@@ -15,13 +15,12 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { normalizedSourceUrlsFromSources } from '@/lib/knowledge-base/kb-helpers';
-import type { ArticleMeta } from '@/types/article';
 import type { KnowledgeBase, KbSource } from '@/types/knowledge-base';
 
 type AddSourceDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  meta: ArticleMeta;
+  focusKeyword: string;
   knowledgeBase: KnowledgeBase;
   onKnowledgeBaseChange: Dispatch<SetStateAction<KnowledgeBase>>;
   onCompetitorWords?: (wordCount: number | undefined) => void;
@@ -30,7 +29,7 @@ type AddSourceDialogProps = {
 export function AddSourceDialog({
   open,
   onOpenChange,
-  meta,
+  focusKeyword,
   knowledgeBase,
   onKnowledgeBaseChange,
   onCompetitorWords,
@@ -90,7 +89,7 @@ export function AddSourceDialog({
             </TabsList>
             <TabsContent value="serp" className="mt-0 min-w-0">
               <AddSerpTab
-                meta={meta}
+                initialQuery={focusKeyword}
                 existingSourceUrls={existingSourceUrls}
                 onAdd={(srcs) => appendSources(srcs, false)}
                 onCompetitorWords={onCompetitorWords}

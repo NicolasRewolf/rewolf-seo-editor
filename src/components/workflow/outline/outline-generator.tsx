@@ -5,11 +5,10 @@ import { useMemo } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { concatKbSources } from '@/lib/knowledge-base/kb-text';
-import type { ArticleMeta } from '@/types/article';
 import type { KnowledgeBase } from '@/types/knowledge-base';
 
 type OutlineGeneratorProps = {
-  meta: ArticleMeta;
+  focusKeyword: string;
   knowledgeBase: KnowledgeBase;
   provider: 'anthropic' | 'openai';
   onProviderChange: (p: 'anthropic' | 'openai') => void;
@@ -20,7 +19,7 @@ type OutlineGeneratorProps = {
 };
 
 export function OutlineGenerator({
-  meta,
+  focusKeyword,
   knowledgeBase,
   provider,
   onProviderChange,
@@ -106,7 +105,7 @@ export function OutlineGenerator({
       <p className="text-muted-foreground text-xs">
         Mot-clé :{' '}
         <span className="text-foreground font-medium">
-          {meta.focusKeyword || '(non défini)'}
+          {focusKeyword || '(non défini)'}
         </span>
       </p>
     </div>

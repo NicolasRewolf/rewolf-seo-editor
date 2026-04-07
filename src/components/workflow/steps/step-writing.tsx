@@ -19,11 +19,12 @@ import {
 import { groupH2WithH3 } from '@/lib/seo/group-headings';
 import type { PlateEditor } from 'platejs/react';
 import type { Descendant, Value } from 'platejs';
-import type { ArticleMeta } from '@/types/article';
+import type { ArticleBrief, ArticleMeta } from '@/types/article';
 import type { KnowledgeBase } from '@/types/knowledge-base';
 
 type StepWritingProps = {
   meta: ArticleMeta;
+  brief: ArticleBrief;
   knowledgeBase: KnowledgeBase;
   editor: PlateEditor;
   docValue: Value;
@@ -34,6 +35,7 @@ type StepWritingProps = {
 
 export function StepWriting({
   meta,
+  brief,
   knowledgeBase,
   editor,
   docValue,
@@ -66,7 +68,12 @@ export function StepWriting({
   );
 
   const contextMessages = useCallback(() => {
-    const ctx = buildArticleContextWithKb(meta, getMarkdown(), knowledgeBase);
+    const ctx = buildArticleContextWithKb(
+      meta,
+      getMarkdown(),
+      knowledgeBase,
+      brief
+    );
     return [
       {
         role: 'system' as const,
@@ -78,7 +85,7 @@ export function StepWriting({
         content: `Contexte article :\n${ctx}`,
       },
     ];
-  }, [meta, getMarkdown, knowledgeBase]);
+  }, [brief, meta, getMarkdown, knowledgeBase]);
 
   const runCustomPrompt = useCallback(() => {
     const extra = promptRef.current?.value?.trim();
@@ -195,7 +202,7 @@ export function StepWriting({
         if (t) prevBits.push(`### Section « ${sections[i].h2} »\n${t}`);
       }
       const userBlock = [
-        `Mot-clé principal : ${meta.focusKeyword || '(non défini)'}`,
+        `Mot-clé principal : ${brief.focusKeyword || '(non défini)'}`,
         `Titre H2 cible : ${sec.h2}`,
         sec.h3.length
           ? `Sous-titres H3 : ${sec.h3.join(' ; ')}`
@@ -239,7 +246,14 @@ export function StepWriting({
         sectionAbortRef.current = null;
       }
     },
-    [docValue, knowledgeBase, meta.focusKeyword, provider, sections, setProvider]
+    [
+      brief.focusKeyword,
+      docValue,
+      knowledgeBase,
+      provider,
+      sections,
+      setProvider,
+    ]
   );
 
   function stopSection() {

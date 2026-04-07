@@ -3,18 +3,17 @@
 import { SerpResearch } from '@/components/workflow/research/serp-research';
 import { SourceImportZone } from '@/components/workflow/research/source-import-zone';
 import { SourceList } from '@/components/workflow/research/source-list';
-import type { ArticleMeta } from '@/types/article';
 import type { KnowledgeBase } from '@/types/knowledge-base';
 
 type StepResearchProps = {
-  meta: ArticleMeta;
+  initialQuery: string;
   knowledgeBase: KnowledgeBase;
   onKnowledgeBaseChange: React.Dispatch<React.SetStateAction<KnowledgeBase>>;
   onCompetitorWords?: (wordCount: number | undefined) => void;
 };
 
 export function StepResearch({
-  meta,
+  initialQuery,
   knowledgeBase,
   onKnowledgeBaseChange,
   onCompetitorWords,
@@ -33,7 +32,7 @@ export function StepResearch({
       </section>
       <section>
         <SerpResearch
-          meta={meta}
+          initialQuery={initialQuery}
           knowledgeBase={knowledgeBase}
           onChange={onKnowledgeBaseChange}
           onCompetitorWords={onCompetitorWords}

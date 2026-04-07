@@ -6,12 +6,25 @@ import { z } from 'zod';
 
 const SLUG_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,126}$/;
 
-const metaSchema = z.object({
+const briefSchema = z.object({
   focusKeyword: z.string(),
+  longTailKeywords: z.array(z.string()),
+  searchIntent: z
+    .enum(['informational', 'transactional', 'navigational', 'commercial'])
+    .nullable(),
+  funnelStage: z.enum(['awareness', 'consideration', 'decision']).nullable(),
+  targetAudience: z.string(),
+  destinationUrl: z.string(),
+  brandVoice: z.string(),
+  businessGoal: z.string(),
+});
+
+const metaSchema = z.object({
   metaTitle: z.string(),
   metaDescription: z.string(),
   slug: z.string(),
   slugLocked: z.boolean(),
+  focusKeyword: z.string().optional(),
 });
 
 const competitorSnapshotSchema = z.object({
@@ -31,6 +44,7 @@ const competitorSnapshotSchema = z.object({
 const articleBodySchema = z.object({
   id: z.string().optional(),
   meta: metaSchema,
+  brief: briefSchema.optional(),
   content: z.array(z.unknown()),
   seoScore: z.number().nullable().optional(),
   competitorData: competitorSnapshotSchema.nullable().optional(),
@@ -132,6 +146,7 @@ articlesRoutes.put('/:slug', async (c) => {
     const payload = {
       id: body.id ?? prevId ?? crypto.randomUUID(),
       meta: body.meta,
+      ...(body.brief != null ? { brief: body.brief } : {}),
       content: body.content,
       seoScore: body.seoScore ?? null,
       competitorData: body.competitorData ?? null,

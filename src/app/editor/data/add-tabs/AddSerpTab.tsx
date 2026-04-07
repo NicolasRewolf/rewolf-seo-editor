@@ -14,11 +14,11 @@ import {
   makeSerpSource,
   normalizeSourceUrl,
 } from '@/lib/knowledge-base/kb-helpers';
-import type { ArticleMeta } from '@/types/article';
 import type { KbSource } from '@/types/knowledge-base';
 
 type AddSerpTabProps = {
-  meta: ArticleMeta;
+  /** Valeur initiale du champ (ex. mot-clé du brief). */
+  initialQuery: string;
   /** URLs déjà présentes dans la base (clés normalisées). */
   existingSourceUrls: ReadonlySet<string>;
   onAdd: (sources: KbSource[]) => void;
@@ -26,12 +26,12 @@ type AddSerpTabProps = {
 };
 
 export function AddSerpTab({
-  meta,
+  initialQuery,
   existingSourceUrls,
   onAdd,
   onCompetitorWords,
 }: AddSerpTabProps) {
-  const [q, setQ] = useState(meta.focusKeyword);
+  const [q, setQ] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [organic, setOrganic] = useState<SerpOrganicItem[]>([]);
@@ -75,7 +75,7 @@ export function AddSerpTab({
     setError(null);
     void (async () => {
       try {
-        const text = await fetchReaderContent(url);
+        const text = await fetchReaderContent(url, { markdown: true });
         const wc = countWords(text);
         onCompetitorWords?.(wc > 0 ? wc : undefined);
         onAdd([
@@ -106,7 +106,7 @@ export function AddSerpTab({
       const results = await Promise.allSettled(
         top.map(async (item) => {
           const url = item.link!;
-          const text = await fetchReaderContent(url);
+          const text = await fetchReaderContent(url, { markdown: true });
           return makeSerpSource(url, item.title ?? url, text);
         })
       );

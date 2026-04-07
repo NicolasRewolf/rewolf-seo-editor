@@ -19,6 +19,7 @@ import { MetaFields } from '@/components/seo/meta-fields';
 import { DataWorkspace } from '@/app/editor/data/DataWorkspace';
 import { WorkflowSidebar } from '@/components/workflow/workflow-sidebar';
 import { WorkflowStepper } from '@/components/workflow/workflow-stepper';
+import { StepBrief } from '@/components/workflow/steps/step-brief';
 import { Editor, EditorContainer } from '@/components/ui/editor';
 import { useSeoAnalysis } from '@/hooks/useSeoAnalysis';
 import {
@@ -33,7 +34,13 @@ import {
   saveStoredArticle,
   type StoredArticle,
 } from '@/lib/storage/local-article';
-import type { ArticleMeta } from '@/types/article';
+import {
+  defaultArticleBrief,
+  splitLegacyMeta,
+  type ArticleBrief,
+  type ArticleMeta,
+  type LegacyArticleMeta,
+} from '@/types/article';
 import type { InternalLinksMap } from '@/types/internal-links';
 import type { KnowledgeBase } from '@/types/knowledge-base';
 import type { WorkflowStep } from '@/types/workflow';
@@ -46,7 +53,6 @@ const defaultValue: Value = normalizeStaticValue([
 ]);
 
 const defaultMeta = (): ArticleMeta => ({
-  focusKeyword: '',
   metaTitle: '',
   metaDescription: '',
   slug: '',
@@ -55,6 +61,23 @@ const defaultMeta = (): ArticleMeta => ({
 
 const emptyKb = (): KnowledgeBase => ({ sources: [] });
 
+function mergeDiskArticle(article: DiskArticlePayload): {
+  meta: ArticleMeta;
+  brief: ArticleBrief;
+} {
+  const merged = {
+    ...defaultMeta(),
+    ...article.meta,
+  } as LegacyArticleMeta;
+  const { meta, briefPatch } = splitLegacyMeta(merged);
+  const brief: ArticleBrief = {
+    ...defaultArticleBrief(),
+    ...(article.brief ?? {}),
+    ...briefPatch,
+  };
+  return { meta, brief };
+}
+
 export function SeoEditor() {
   const [searchParams, setSearchParams] = useSearchParams();
   const stored = useMemo(() => loadStoredArticle(), []);
@@ -62,7 +85,8 @@ export function SeoEditor() {
   const initial = useMemo<StoredArticle>(() => {
     if (stored) {
       return {
-        meta: { ...defaultMeta(), ...stored.meta },
+        meta: stored.meta,
+        brief: stored.brief,
         content: stored.content,
         knowledgeBase: stored.knowledgeBase ?? emptyKb(),
         internalLinks: stored.internalLinks ?? null,
@@ -70,6 +94,7 @@ export function SeoEditor() {
     }
     return {
       meta: defaultMeta(),
+      brief: defaultArticleBrief(),
       content: defaultValue,
       knowledgeBase: emptyKb(),
       internalLinks: null,
@@ -78,6 +103,8 @@ export function SeoEditor() {
 
   const [meta, setMeta] = useState<ArticleMeta>(initial.meta);
   const metaRef = useRef(meta);
+  const [brief, setBrief] = useState<ArticleBrief>(initial.brief);
+  const briefRef = useRef(brief);
   const [docValue, setDocValue] = useState<Value>(initial.content);
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('research');
   const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBase>(
@@ -99,6 +126,9 @@ export function SeoEditor() {
   useEffect(() => {
     metaRef.current = meta;
   }, [meta]);
+  useEffect(() => {
+    briefRef.current = brief;
+  }, [brief]);
 
   const editor = usePlateEditor({
     plugins: EditorKit,
@@ -118,6 +148,7 @@ export function SeoEditor() {
       try {
         await saveArticleToDisk({
           meta,
+          brief,
           content: editor.children as Value,
           exportedAt: new Date().toISOString(),
         });
@@ -132,17 +163,18 @@ export function SeoEditor() {
         );
       }
     })();
-  }, [editor, meta]);
+  }, [editor, meta, brief]);
 
   const seoPayload = useMemo(
     () =>
       buildSeoPayload(
         docValue as Descendant[],
         meta,
+        brief.focusKeyword,
         undefined,
         competitorWordCount
       ),
-    [docValue, meta, competitorWordCount]
+    [docValue, meta, brief.focusKeyword, competitorWordCount]
   );
   const seoAnalysis = useSeoAnalysis(seoPayload);
 
@@ -166,6 +198,7 @@ export function SeoEditor() {
   function persistArticle(content: Value) {
     debouncedSave({
       meta: metaRef.current,
+      brief: briefRef.current,
       content,
       knowledgeBase: kbRef.current,
       internalLinks: ilRef.current,
@@ -177,6 +210,19 @@ export function SeoEditor() {
     setMeta(next);
     debouncedSave({
       meta: next,
+      brief: briefRef.current,
+      content: editor.children as Value,
+      knowledgeBase: kbRef.current,
+      internalLinks: ilRef.current,
+    });
+  }
+
+  function persistBrief(next: ArticleBrief) {
+    briefRef.current = next;
+    setBrief(next);
+    debouncedSave({
+      meta: metaRef.current,
+      brief: next,
       content: editor.children as Value,
       knowledgeBase: kbRef.current,
       internalLinks: ilRef.current,
@@ -186,6 +232,7 @@ export function SeoEditor() {
   useEffect(() => {
     debouncedSave({
       meta: metaRef.current,
+      brief: briefRef.current,
       content: editor.children as Value,
       knowledgeBase,
       internalLinks,
@@ -196,9 +243,11 @@ export function SeoEditor() {
     (article: DiskArticlePayload) => {
       const normalized = normalizeStaticValue(article.content as Value);
       editor.tf.setValue(normalized);
-      const nextMeta = { ...defaultMeta(), ...article.meta };
+      const { meta: nextMeta, brief: nextBrief } = mergeDiskArticle(article);
       metaRef.current = nextMeta;
       setMeta(nextMeta);
+      briefRef.current = nextBrief;
+      setBrief(nextBrief);
       setDocValue(normalized);
       setWordCount(countWords(plainTextFromValue(normalized as Descendant[])));
       setCompetitorWordCount(undefined);
@@ -207,6 +256,7 @@ export function SeoEditor() {
       debouncedSave.cancel();
       saveStoredArticle({
         meta: nextMeta,
+        brief: nextBrief,
         content: normalized,
         knowledgeBase: emptyKb(),
         internalLinks: null,
@@ -243,6 +293,84 @@ export function SeoEditor() {
     };
   }, [searchParams, setSearchParams, applyLoadedArticle]);
 
+  const editorAndSidebar = (
+    <>
+      {currentStep === 'finalize' && (
+        <MetaFields
+          meta={meta}
+          focusKeywordReadonly={brief.focusKeyword}
+          onMetaChange={persistMeta}
+        />
+      )}
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          <Plate
+            editor={editor}
+            onValueChange={({ value }) => {
+              setDocValue(value);
+              setWordCount(countWords(plainTextFromValue(value as Descendant[])));
+              persistArticle(value);
+            }}
+          >
+            <div className="border-border flex flex-wrap items-center gap-2 border-b px-3 py-2">
+              <EditorHeadingToolbar />
+            </div>
+            <EditorContainer
+              variant="select"
+              className="min-h-[min(70vh,560px)] flex-1 rounded-none border-0"
+            >
+              <Editor
+                variant="default"
+                placeholder="Choisissez Texte / H1 / H2 / H3 au-dessus, ou tapez / pour le menu…"
+                className="min-h-[min(70vh,560px)]"
+              />
+            </EditorContainer>
+            <EditorFloatingToolbar />
+          </Plate>
+
+          <footer className="border-border bg-muted/30 text-muted-foreground flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-xs">
+            <span>
+              {wordCount} mot{wordCount > 1 ? 's' : ''}
+            </span>
+            <span>
+              Local (2 s) + API PUT data/articles/ si vous utilisez Enregistrer
+            </span>
+          </footer>
+        </div>
+
+        <div className="border-border flex min-h-0 min-w-0 flex-col border-t lg:h-full lg:w-[min(100%,440px)] lg:shrink-0 lg:border-t-0 lg:border-l">
+          <WorkflowStepper current={currentStep} onChange={setCurrentStep} />
+          <WorkflowSidebar
+            step={currentStep}
+            meta={meta}
+            brief={brief}
+            knowledgeBase={knowledgeBase}
+            onKnowledgeBaseChange={setKnowledgeBase}
+            internalLinks={internalLinks}
+            onInternalLinksChange={setInternalLinks}
+            seoAnalysis={seoAnalysis}
+            editor={editor}
+            docValue={docValue}
+            getMarkdown={() => editor.getApi(MarkdownPlugin).markdown.serialize()}
+            getSelectionText={() => {
+              const { selection } = editor;
+              if (!selection || Range.isCollapsed(selection)) return '';
+              return SlateEditor.string(
+                editor as unknown as BaseEditor,
+                selection
+              );
+            }}
+            onMetaChange={persistMeta}
+            onCompetitorWords={onCompetitorBenchmark}
+            headings={seoPayload.headings}
+            userPlainText={seoPayload.plainText}
+            onSaveToDisk={handleSaveToDisk}
+          />
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="bg-background flex min-h-svh flex-col">
       <header className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
@@ -276,84 +404,24 @@ export function SeoEditor() {
         <div className="flex min-h-0 flex-1 flex-col">
           <WorkflowStepper current={currentStep} onChange={setCurrentStep} />
           <DataWorkspace
-            meta={meta}
+            brief={brief}
             knowledgeBase={knowledgeBase}
             onKnowledgeBaseChange={setKnowledgeBase}
             competitorWordCount={competitorWordCount}
             onCompetitorBenchmark={onCompetitorBenchmark}
           />
         </div>
-      ) : (
-        <>
-          {currentStep === 'finalize' && (
-            <MetaFields meta={meta} onMetaChange={persistMeta} />
-          )}
-          <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-            <Plate
-              editor={editor}
-              onValueChange={({ value }) => {
-                setDocValue(value);
-                setWordCount(countWords(plainTextFromValue(value as Descendant[])));
-                persistArticle(value);
-              }}
-            >
-              <div className="border-border flex flex-wrap items-center gap-2 border-b px-3 py-2">
-                <EditorHeadingToolbar />
-              </div>
-              <EditorContainer
-                variant="select"
-                className="min-h-[min(70vh,560px)] flex-1 rounded-none border-0"
-              >
-                <Editor
-                  variant="default"
-                  placeholder="Choisissez Texte / H1 / H2 / H3 au-dessus, ou tapez / pour le menu…"
-                  className="min-h-[min(70vh,560px)]"
-                />
-              </EditorContainer>
-              <EditorFloatingToolbar />
-            </Plate>
-
-            <footer className="border-border bg-muted/30 text-muted-foreground flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-xs">
-              <span>
-                {wordCount} mot{wordCount > 1 ? 's' : ''}
-              </span>
-              <span>
-                Local (2 s) + API PUT data/articles/ si vous utilisez Enregistrer
-              </span>
-            </footer>
-          </div>
-
-          <div className="border-border flex min-h-0 min-w-0 flex-col border-t lg:h-full lg:w-[min(100%,440px)] lg:shrink-0 lg:border-t-0 lg:border-l">
-            <WorkflowStepper current={currentStep} onChange={setCurrentStep} />
-            <WorkflowSidebar
-              step={currentStep}
-              meta={meta}
-              knowledgeBase={knowledgeBase}
-              onKnowledgeBaseChange={setKnowledgeBase}
-              internalLinks={internalLinks}
-              onInternalLinksChange={setInternalLinks}
-              seoAnalysis={seoAnalysis}
-              editor={editor}
-              docValue={docValue}
-              getMarkdown={() => editor.getApi(MarkdownPlugin).markdown.serialize()}
-              getSelectionText={() => {
-                const { selection } = editor;
-                if (!selection || Range.isCollapsed(selection)) return '';
-                return SlateEditor.string(
-                  editor as unknown as BaseEditor,
-                  selection
-                );
-              }}
-              onMetaChange={persistMeta}
-              onCompetitorWords={onCompetitorBenchmark}
-              headings={seoPayload.headings}
-              userPlainText={seoPayload.plainText}
-              onSaveToDisk={handleSaveToDisk}
-            />
-          </div>
+      ) : currentStep === 'brief' ? (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <WorkflowStepper current={currentStep} onChange={setCurrentStep} />
+          <StepBrief
+            brief={brief}
+            onBriefChange={persistBrief}
+            knowledgeBase={knowledgeBase}
+          />
         </div>
-        </>
+      ) : (
+        <>{editorAndSidebar}</>
       )}
     </div>
   );

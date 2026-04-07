@@ -33,6 +33,18 @@ export function buildKbContextBlock(kb: KnowledgeBase, maxChars: number): string
   return `${KB_BLOCK}\n${body}`;
 }
 
+/** Liste lisible des H1–H3 par source (structures concurrentes). */
+export function formatCompetitorHeadings(kb: KnowledgeBase): string {
+  const blocks: string[] = [];
+  for (const s of kb.sources) {
+    const hh = s.headings;
+    if (!hh?.length) continue;
+    const lines = hh.map((h) => `${'#'.repeat(h.level)} ${h.text}`);
+    blocks.push(`### ${s.label}\n${lines.join('\n')}`);
+  }
+  return blocks.length ? blocks.join('\n\n') : '(aucune structure de titres extraite — importez des URLs/SERP en Markdown)';
+}
+
 /** Stopwords FR (extraits pour excerpts + stats cluster). */
 export const KB_FRENCH_STOPWORDS = new Set([
   'pour',

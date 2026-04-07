@@ -7,7 +7,13 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { fetchReaderContent } from '@/lib/api/reader-fetch';
-import { countWords, makeSource, normalizeSourceUrl } from '@/lib/knowledge-base/kb-helpers';
+import { extractHeadingsFromMarkdown } from '@/lib/knowledge-base/extract-headings';
+import {
+  countWords,
+  makeSource,
+  normalizeSourceUrl,
+  roughPlainFromMarkdown,
+} from '@/lib/knowledge-base/kb-helpers';
 import type { KbSource } from '@/types/knowledge-base';
 
 type AddUrlTabProps = {
@@ -47,15 +53,18 @@ export function AddUrlTab({
     setError(null);
     void (async () => {
       try {
-        const text = await fetchReaderContent(u);
-        const wc = countWords(text);
+        const md = await fetchReaderContent(u, { markdown: true });
+        const plain = roughPlainFromMarkdown(md);
+        const headings = extractHeadingsFromMarkdown(md);
+        const wc = countWords(plain);
         onFetchedUrlWords?.(wc > 0 ? wc : undefined);
         onAdd([
           makeSource({
             type: 'url',
             label: u.length > 48 ? `${u.slice(0, 45)}…` : u,
-            content: text,
+            content: plain,
             url: u,
+            headings: headings.length ? headings : undefined,
           }),
         ]);
         setUrl('');

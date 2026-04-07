@@ -81,6 +81,8 @@ function walkDescendants(
 export function buildSeoPayload(
   value: Descendant[],
   meta: ArticleMeta,
+  /** Mot-clé principal (provenant du brief). */
+  focusKeyword: string,
   siteHost?: string,
   /** Mots de la page concurrente (Reader) pour le benchmark longueur. */
   competitorAvgWords?: number
@@ -125,7 +127,7 @@ export function buildSeoPayload(
 
   return {
     plainText,
-    focusKeyword: meta.focusKeyword,
+    focusKeyword: focusKeyword.trim(),
     metaTitle: meta.metaTitle,
     metaDescription: meta.metaDescription,
     slug: meta.slug,

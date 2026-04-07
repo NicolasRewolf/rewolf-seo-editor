@@ -1,9 +1,10 @@
 import { apiUrl } from '@/lib/api/base-url';
-import type { ArticleMeta } from '@/types/article';
+import type { ArticleBrief, ArticleMeta, LegacyArticleMeta } from '@/types/article';
 import type { Value } from 'platejs';
 
 export type DiskArticlePayload = {
-  meta: ArticleMeta;
+  meta: ArticleMeta | LegacyArticleMeta;
+  brief?: ArticleBrief;
   content: Value;
   exportedAt?: string;
 };
@@ -66,6 +67,7 @@ export async function saveArticleToDisk(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       meta: payload.meta,
+      brief: payload.brief,
       content: payload.content,
       exportedAt: payload.exportedAt ?? new Date().toISOString(),
     }),

@@ -1,7 +1,10 @@
 const JINA_BASE = 'https://r.jina.ai';
 
-export async function fetchJinaPlainText(
-  targetUrl: string
+export type JinaFetchMode = 'plain' | 'markdown';
+
+export async function fetchJinaContent(
+  targetUrl: string,
+  mode: JinaFetchMode = 'plain'
 ): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
   let target: URL;
   try {
@@ -15,10 +18,17 @@ export async function fetchJinaPlainText(
   }
 
   const jinaUrl = `${JINA_BASE}/${target.toString()}`;
+  const accept =
+    mode === 'markdown'
+      ? 'text/markdown'
+      : 'text/plain';
 
   try {
     const res = await fetch(jinaUrl, {
-      headers: { Accept: 'text/plain' },
+      headers: {
+        Accept: accept,
+        ...(mode === 'markdown' ? { 'X-Return-Format': 'markdown' } : {}),
+      },
     });
     const text = await res.text();
     if (!res.ok) {
@@ -34,4 +44,11 @@ export async function fetchJinaPlainText(
       error: e instanceof Error ? e.message : 'Erreur réseau Jina',
     };
   }
+}
+
+/** @deprecated Utiliser fetchJinaContent(url, 'plain') */
+export async function fetchJinaPlainText(
+  targetUrl: string
+): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  return fetchJinaContent(targetUrl, 'plain');
 }

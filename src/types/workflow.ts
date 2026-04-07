@@ -1,4 +1,9 @@
-export type WorkflowStep = 'research' | 'outline' | 'writing' | 'finalize';
+export type WorkflowStep =
+  | 'research'
+  | 'brief'
+  | 'outline'
+  | 'writing'
+  | 'finalize';
 
 export type StepConfig = {
   id: WorkflowStep;
@@ -15,20 +20,26 @@ export const WORKFLOW_STEPS: StepConfig[] = [
     description: 'Sources, SERP, extraction URL',
   },
   {
+    id: 'brief',
+    label: '2. Brief',
+    shortLabel: 'Brief',
+    description: 'Intention, audience, longue traîne',
+  },
+  {
     id: 'outline',
-    label: '2. Plan',
+    label: '3. Plan',
     shortLabel: 'Plan',
     description: 'Structure H2/H3 et insertion',
   },
   {
     id: 'writing',
-    label: '3. Rédaction',
+    label: '4. Rédaction',
     shortLabel: 'Rédac.',
     description: 'Rédaction assistée par IA',
   },
   {
     id: 'finalize',
-    label: '4. Finaliser',
+    label: '5. Finaliser',
     shortLabel: 'Finaliser',
     description: 'SEO, liens, meta, export',
   },

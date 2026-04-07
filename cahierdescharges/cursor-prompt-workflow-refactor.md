@@ -19,7 +19,9 @@ Le vrai workflow rédactionnel est **séquentiel** (pipeline) :
 ## Ce qui ne change PAS (ne pas casser)
 
 ### Backend (server/)
+
 Tous les fichiers serveur restent identiques. Ne pas toucher :
+
 - `server/index.ts`
 - `server/routes/ai.ts` (endpoints `/api/ai/stream`, `/api/ai/object`, `/api/ai/command`)
 - `server/routes/serp.ts`
@@ -31,6 +33,7 @@ Tous les fichiers serveur restent identiques. Ne pas toucher :
 - `server/lib/jina.ts`
 
 ### Libs réutilisées telles quelles
+
 - `src/lib/api/stream-ai.ts` — streamAiChat()
 - `src/lib/api/ai-object.ts` — aiGenerateObject()
 - `src/lib/api/serp-search.ts` — searchSerp()
@@ -48,7 +51,8 @@ Tous les fichiers serveur restent identiques. Ne pas toucher :
 - `src/types/seo.ts`, `src/types/article.ts`, `src/types/jsonld-blog.ts`
 
 ### Composants UI réutilisés
-- Tous les composants `src/components/ui/*` (shadcn)
+
+- Tous les composants `src/components/ui/`* (shadcn)
 - Tous les composants `src/components/editor/*` (Plate plugins, toolbar, editor-kit)
 - `src/components/seo/serp-preview.tsx` — preview SERP
 - `src/components/seo/meta-fields.tsx` — champs meta au-dessus de l'éditeur
@@ -204,11 +208,13 @@ src/components/workflow/
 **Section A — Import de sources**
 
 Composant `source-import-zone.tsx` :
+
 - Zone de texte extensible pour **coller du contenu brut** (typiquement un export NotebookLM, des notes, du copier-coller web). Bouton "Ajouter" qui crée un `KbSource` de type `text`.
 - Bouton **"Importer fichier(s)"** : accepte `.txt`, `.md`, `.json`. Lecture côté client avec `FileReader`. Chaque fichier crée un `KbSource` de type `file`.
 - Input URL + bouton **"Extraire"** : appelle `fetchReaderContent()` (déjà codé dans `src/lib/api/reader-fetch.ts`), crée un `KbSource` de type `url`.
 
 Composant `source-list.tsx` :
+
 - Affiche chaque source : label, type (badge), word count, date d'ajout.
 - Bouton supprimer (icône X).
 - Bouton "Voir" pour expand/collapse le contenu brut (tronqué à 500 chars par défaut).
@@ -217,6 +223,7 @@ Composant `source-list.tsx` :
 **Section B — Recherche SERP**
 
 Composant `serp-research.tsx` :
+
 - Reprend la logique de `SerpLookup` (composant existant `src/components/seo/serp-lookup.tsx`) : input requête + résultats organiques.
 - **Différence** : au lieu d'un bouton "Reader" qui envoie vers un autre panneau, chaque résultat SERP a un bouton **"Ajouter à la base"** qui :
   1. Appelle `fetchReaderContent(url)` (déjà codé)
@@ -231,6 +238,7 @@ Composant `serp-research.tsx` :
 **Layout** : une section unique dans la sidebar.
 
 Composant `outline-generator.tsx` :
+
 - Affiche un résumé de la KB (nombre de sources, mots totaux).
 - Bouton **"Générer le plan"** qui appelle `streamAiChat()` (hook `useAiAssistant`) avec un prompt spécifique :
   - System prompt : utilise `SEO_WRITING_PROMPT` du serveur (via `/api/ai/stream` avec `taskGroup: 'quality'`)
@@ -239,6 +247,7 @@ Composant `outline-generator.tsx` :
 - Le résultat s'affiche en streaming dans `outline-preview.tsx`.
 
 Composant `outline-preview.tsx` :
+
 - Affiche le plan généré en Markdown renderé (ou en `<pre>` avec highlighting).
 - Bouton **"Régénérer"** pour relancer.
 - Bouton **"Insérer dans l'éditeur"** qui convertit le plan Markdown en nodes Plate (headings H2/H3 + paragraphes de points clés) via `editor.getApi(MarkdownPlugin).markdown.deserialize()` puis `editor.tf.setValue()`.
@@ -251,6 +260,7 @@ Composant `outline-preview.tsx` :
 **Détection des sections** : lire les headings H2 depuis `docValue` (déjà extrait dans `buildSeoPayload` → `headings`). Afficher la liste des H2 en cours comme une checklist.
 
 **Pour chaque H2** :
+
 - Afficher le titre H2.
 - Bouton **"Rédiger cette section"** qui appelle `streamAiChat()` avec :
   - Le mot-clé principal
@@ -274,11 +284,13 @@ Composant `outline-preview.tsx` :
 **Section A — Liens internes** (`internal-links-import.tsx` + `internal-links-suggest.tsx`)
 
 Import :
+
 - Bouton **"Importer le fichier .json de liens internes"**. Accepte un fichier `.json` au format `InternalLink[]` ou `{ links: InternalLink[] }`.
 - Après import, affiche la liste des liens disponibles (URL + anchor + titre).
 - Stocke dans le state `internalLinks: InternalLinksMap`.
 
 Suggestions :
+
 - Bouton **"Suggérer des liens"** qui appelle `streamAiChat()` avec :
   - Le contenu Markdown de l'article
   - La liste complète des liens internes disponibles (JSON)
@@ -288,6 +300,7 @@ Suggestions :
 **Section B — Termes manquants** (`nlp-missing-terms.tsx`)
 
 Reprend la logique de `Phase3SerpNlpPanel` mais simplifiée :
+
 - Si la KB contient des sources de type `serp`, utiliser directement leur `content` comme corpus concurrent pour `missingTermsVsCompetitors()`.
 - Sinon, afficher l'input requête Google + bouton "Analyser depuis SERP" (logique `runFromSerp` existante).
 - Affiche la liste des termes manquants.
@@ -309,12 +322,15 @@ Reprend la logique de `Phase3SerpNlpPanel` mais simplifiée :
 **Layout** : score SEO + export.
 
 **Section A — Score SEO**
+
 - Reprend `SeoPanel` tel quel (`src/components/seo/seo-panel.tsx`). Score global 0-100 avec les 6 dimensions dépliables.
 
 **Section B — Preview SERP**
+
 - Reprend `SerpPreview` (déjà dans `MetaFields`, mais l'afficher aussi ici pour validation finale).
 
 **Section C — Export**
+
 - Regroupe les boutons d'export actuellement dans le header de `SeoEditor.tsx` :
   - Exporter Markdown
   - Exporter HTML
@@ -345,6 +361,7 @@ Barre horizontale au-dessus de la sidebar (ou en haut de la sidebar). Affiche le
 Le composant principal `src/app/editor/SeoEditor.tsx` doit être modifié :
 
 ### State à ajouter
+
 ```ts
 const [currentStep, setCurrentStep] = useState<WorkflowStep>('research');
 const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBase>({ sources: [] });
@@ -378,6 +395,7 @@ La colonne droite (actuellement `<div className="border-border flex min-h-0 ..."
 ### Header simplifié
 
 Le header ne contient plus les boutons d'export (déplacés dans Step 5). Il garde :
+
 - Le titre REWOLF / Éditeur
 - Le lien "Articles" (vers /projects)
 - Le bouton "Enregistrer ./data" (pour la sauvegarde rapide à tout moment)
@@ -475,6 +493,7 @@ Ajouter les routes correspondantes si nécessaire (elles peuvent utiliser `/api/
 ## Fichiers à supprimer ou déprécier
 
 Ces composants ne sont plus utilisés directement dans SeoEditor (leur logique est absorbée par les steps) :
+
 - `src/components/seo/serp-lookup.tsx` → logique reprise dans `serp-research.tsx` (step 1). Peut être supprimé ou gardé comme import si tu extrais la logique commune.
 - `src/components/seo/reader-url-panel.tsx` → logique intégrée dans `serp-research.tsx` (step 1). Peut être supprimé.
 - `src/components/seo/phase3-serp-nlp-panel.tsx` → logique reprise dans `nlp-missing-terms.tsx` (step 4). Peut être supprimé.
@@ -511,3 +530,4 @@ Attends ma validation avant de passer d'une étape à la suivante.
 - **Pas d'upload serveur** : les fichiers importés sont lus côté client avec `FileReader` et stockés en mémoire + localStorage. Pas de nouvelle route backend pour ça.
 - **Streaming IA** : toutes les générations de texte utilisent `streamAiChat()` (hook `useAiAssistant`) via `/api/ai/stream`. Les objets structurés utilisent `aiGenerateObject()` via `/api/ai/object`. Ne pas créer de nouvelles routes.
 - **Largeur sidebar** : passer de `lg:w-[min(100%,392px)]` à `lg:w-[min(100%,440px)]` pour laisser plus de place aux formulaires.
+

@@ -19,6 +19,8 @@ type MetaFieldsProps = {
   meta: ArticleMeta;
   onMetaChange: (next: ArticleMeta) => void;
   siteHost?: string;
+  /** Mot-clé défini à l’étape Brief (lecture seule ici). */
+  focusKeywordReadonly: string;
 };
 
 function statusClass(ok: boolean, warn: boolean) {
@@ -31,6 +33,7 @@ export function MetaFields({
   meta,
   onMetaChange,
   siteHost,
+  focusKeywordReadonly,
 }: MetaFieldsProps) {
   const titlePx = useMemo(
     () => measureTitleWidthPx(meta.metaTitle),
@@ -81,24 +84,19 @@ export function MetaFields({
               Réglages SEO
             </h2>
             <p className="text-muted-foreground text-xs">
-              Mot-clé principal, balises et URL — utilisés pour le score et
-              l'aperçu ci-contre.
+              Mot-clé (brief), balises et URL — utilisés pour le score et l’aperçu
+              ci-contre.
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <label
-              htmlFor="focus-keyword"
-              className="text-foreground text-sm font-medium"
-            >
-              Mot-clé principal
-            </label>
-            <Input
-              id="focus-keyword"
-              placeholder="ex. avocat droit du travail bordeaux"
-              value={meta.focusKeyword}
-              onChange={(e) => patch({ focusKeyword: e.target.value })}
-            />
+            <p className="text-foreground text-sm font-medium">Mot-clé principal</p>
+            <p className="border-border bg-muted/40 text-foreground rounded-md border px-3 py-2 text-sm">
+              {focusKeywordReadonly.trim() || '(non défini — étape Brief)'}
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Modifiable à l’étape Brief du workflow.
+            </p>
           </div>
 
           <div className="space-y-1.5">

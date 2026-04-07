@@ -5,7 +5,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { StepFinalize } from '@/components/workflow/steps/step-finalize';
 import { StepOutline } from '@/components/workflow/steps/step-outline';
 import { StepWriting } from '@/components/workflow/steps/step-writing';
-import type { ArticleMeta } from '@/types/article';
+import type { ArticleBrief, ArticleMeta } from '@/types/article';
 import type { InternalLinksMap } from '@/types/internal-links';
 import type { KnowledgeBase } from '@/types/knowledge-base';
 import type { SeoAnalysisResult } from '@/types/seo';
@@ -16,6 +16,7 @@ import type { Value } from 'platejs';
 export type WorkflowSidebarProps = {
   step: WorkflowStep;
   meta: ArticleMeta;
+  brief: ArticleBrief;
   knowledgeBase: KnowledgeBase;
   onKnowledgeBaseChange: Dispatch<SetStateAction<KnowledgeBase>>;
   internalLinks: InternalLinksMap | null;
@@ -36,6 +37,7 @@ export function WorkflowSidebar(props: WorkflowSidebarProps) {
   const {
     step,
     meta,
+    brief,
     knowledgeBase,
     internalLinks,
     onInternalLinksChange,
@@ -53,10 +55,12 @@ export function WorkflowSidebar(props: WorkflowSidebarProps) {
   switch (step) {
     case 'research':
       return null;
+    case 'brief':
+      return null;
     case 'outline':
       return (
         <StepOutline
-          meta={meta}
+          brief={brief}
           knowledgeBase={knowledgeBase}
           editor={editor}
           getMarkdown={getMarkdown}
@@ -66,6 +70,7 @@ export function WorkflowSidebar(props: WorkflowSidebarProps) {
       return (
         <StepWriting
           meta={meta}
+          brief={brief}
           knowledgeBase={knowledgeBase}
           editor={editor}
           docValue={docValue}
@@ -78,6 +83,7 @@ export function WorkflowSidebar(props: WorkflowSidebarProps) {
       return (
         <StepFinalize
           meta={meta}
+          brief={brief}
           knowledgeBase={knowledgeBase}
           internalLinks={internalLinks}
           onInternalLinksChange={onInternalLinksChange}

@@ -1,3 +1,4 @@
+import { extractHeadingsFromMarkdown } from '@/lib/knowledge-base/extract-headings';
 import type { KbSource } from '@/types/knowledge-base';
 
 /** Clé stable pour détecter si une URL est déjà en base (http→https, slash final, casse). */
@@ -46,12 +47,28 @@ export function makeSource(
   };
 }
 
-export function makeSerpSource(url: string, title: string, content: string): KbSource {
+/** Texte lisible pour comptage mots à partir du Markdown Jina. */
+export function roughPlainFromMarkdown(md: string): string {
+  return md
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/`+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Contenu = texte dérivé du MD ; `headings` extraits du même flux. */
+export function makeSerpSource(url: string, title: string, markdown: string): KbSource {
   const label = title.length > 60 ? `${title.slice(0, 57)}…` : title;
+  const plain = roughPlainFromMarkdown(markdown);
+  const headings = extractHeadingsFromMarkdown(markdown);
   return makeSource({
     type: 'serp',
     label,
-    content,
+    content: plain,
     url,
+    headings: headings.length ? headings : undefined,
   });
 }
