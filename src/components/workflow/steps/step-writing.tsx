@@ -2,7 +2,9 @@
 
 import { CopyIcon, Loader2Icon, SquareIcon } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { toast } from 'sonner';
+import { AIChatPlugin } from '@platejs/ai/react';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -11,12 +13,28 @@ import { useAiAssistant } from '@/hooks/useAiAssistant';
 import { streamAiChatWithFallback } from '@/lib/api/stream-ai';
 import { buildArticleContextWithKb } from '@/lib/ai/article-context';
 import { SEO_SECTION_FROM_KB_PROMPT } from '@/lib/ai/prompts/workflow';
+import {
+  SEO_ALT_TEXT_PROMPT,
+  SEO_FAQ_PROMPT,
+  SEO_HEADLINE_VARIANTS_PROMPT,
+  SEO_INTRO_PROMPT,
+} from '@/lib/ai/prompts/writing';
 import { kbExcerptForHeading } from '@/lib/knowledge-base/kb-text';
 import {
+  collectH2Paths,
+  insertMarkdownAtDocumentEnd,
+  insertMarkdownAtDocumentStart,
   insertMarkdownAfterH2ByIndex,
   plainTextForSectionAroundH2,
 } from '@/lib/plate/insert-markdown';
 import { groupH2WithH3 } from '@/lib/seo/group-headings';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import type { PlateEditor } from 'platejs/react';
 import type { Descendant, Value } from 'platejs';
 import type { ArticleBrief, ArticleMeta } from '@/types/article';
@@ -31,6 +49,8 @@ type StepWritingProps = {
   getMarkdown: () => string;
   getSelectionText: () => string;
   headings: { level: number; text: string }[];
+  seoPanel?: ReactNode;
+  onAiSnapshot?: (kind: 'ai-insert' | 'ai-rewrite', label?: string) => void;
 };
 
 export function StepWriting({
@@ -42,6 +62,8 @@ export function StepWriting({
   getMarkdown,
   getSelectionText,
   headings,
+  seoPanel,
+  onAiSnapshot,
 }: StepWritingProps) {
   const sections = useMemo(() => groupH2WithH3(headings), [headings]);
 
@@ -49,6 +71,7 @@ export function StepWriting({
     provider,
     setProvider,
     output,
+    setOutput,
     loading,
     error,
     setError,
@@ -66,6 +89,12 @@ export function StepWriting({
   const [sectionChecked, setSectionChecked] = useState<Record<number, boolean>>(
     {}
   );
+  const [directInsertMode, setDirectInsertMode] = useState(true);
+  const [headlineVariants, setHeadlineVariants] = useState<string[]>([]);
+  const [selectedHeadlineVariant, setSelectedHeadlineVariant] = useState('');
+  const [altModalOpen, setAltModalOpen] = useState(false);
+  const [altPrompt, setAltPrompt] = useState('');
+  const [altResult, setAltResult] = useState('');
 
   const contextMessages = useCallback(() => {
     const ctx = buildArticleContextWithKb(
@@ -100,6 +129,41 @@ export function StepWriting({
     );
   }, [contextMessages, run, setError]);
 
+  const runShortcutPrompt = useCallback(
+    async (
+      systemPrompt: string,
+      userPrompt: string,
+      opts?: { onComplete?: (text: string) => void }
+    ) => {
+      setError(null);
+      setOutput('');
+      await run(
+        [
+          ...contextMessages(),
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        'quality',
+        opts
+      );
+    },
+    [contextMessages, run, setError]
+  );
+
+  const parseHeadlineVariants = useCallback((text: string): string[] => {
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) =>
+        line
+          .replace(/^\s*[-*]\s*Variante\s*\d+\s*:\s*/i, '')
+          .replace(/^\s*Variante\s*\d+\s*:\s*/i, '')
+          .replace(/^\s*[-*]\s*/, '')
+          .trim()
+      )
+      .filter(Boolean);
+    return lines.slice(0, 5);
+  }, []);
+
   const runRewriteSelection = useCallback(() => {
     const sel = getSelectionText().trim();
     if (!sel) {
@@ -107,6 +171,15 @@ export function StepWriting({
       return;
     }
     setError(null);
+    if (directInsertMode) {
+      onAiSnapshot?.('ai-rewrite', 'Réécriture sélection');
+      void editor.getApi(AIChatPlugin).aiChat.submit(sel, {
+        prompt:
+          "Réécris le passage suivant pour le SEO (clarté, intention de recherche, mot-clé naturel). Garde le ton informatif.",
+        toolName: 'edit',
+      });
+      return;
+    }
     void run(
       [
         ...contextMessages(),
@@ -117,7 +190,15 @@ export function StepWriting({
       ],
       'quality'
     );
-  }, [contextMessages, getSelectionText, run, setError]);
+  }, [
+    contextMessages,
+    directInsertMode,
+    editor,
+    getSelectionText,
+    onAiSnapshot,
+    run,
+    setError,
+  ]);
 
   const runSimplifySelection = useCallback(() => {
     const sel = getSelectionText().trim();
@@ -126,6 +207,15 @@ export function StepWriting({
       return;
     }
     setError(null);
+    if (directInsertMode) {
+      onAiSnapshot?.('ai-rewrite', 'Simplification sélection');
+      void editor.getApi(AIChatPlugin).aiChat.submit(sel, {
+        prompt:
+          'Simplifie le passage suivant : phrases plus courtes (< 25 mots), vocabulaire accessible, supprime le jargon inutile. Conserve le sens et le mot-clé principal.',
+        toolName: 'edit',
+      });
+      return;
+    }
     void run(
       [
         ...contextMessages(),
@@ -136,7 +226,15 @@ export function StepWriting({
       ],
       'quality'
     );
-  }, [contextMessages, getSelectionText, run, setError]);
+  }, [
+    contextMessages,
+    directInsertMode,
+    editor,
+    getSelectionText,
+    onAiSnapshot,
+    run,
+    setError,
+  ]);
 
   const runExpandSelection = useCallback(() => {
     const sel = getSelectionText().trim();
@@ -145,6 +243,16 @@ export function StepWriting({
       return;
     }
     setError(null);
+    if (directInsertMode) {
+      onAiSnapshot?.('ai-insert', 'Développement sélection');
+      void editor.getApi(AIChatPlugin).aiChat.submit(sel, {
+        mode: 'insert',
+        prompt:
+          'Développe le passage suivant : ajoute des détails, des exemples concrets, des données chiffrées. Garde le mot-clé naturellement intégré. 2 à 4 paragraphes de sortie.',
+        toolName: 'generate',
+      });
+      return;
+    }
     void run(
       [
         ...contextMessages(),
@@ -155,7 +263,15 @@ export function StepWriting({
       ],
       'quality'
     );
-  }, [contextMessages, getSelectionText, run, setError]);
+  }, [
+    contextMessages,
+    directInsertMode,
+    editor,
+    getSelectionText,
+    onAiSnapshot,
+    run,
+    setError,
+  ]);
 
   const runTranslateSelection = useCallback(() => {
     const sel = getSelectionText().trim();
@@ -170,6 +286,14 @@ export function StepWriting({
         sel
       );
     const targetLang = isFrench ? 'anglais' : 'français';
+    if (directInsertMode) {
+      onAiSnapshot?.('ai-rewrite', 'Traduction sélection');
+      void editor.getApi(AIChatPlugin).aiChat.submit(sel, {
+        prompt: `Traduis le passage suivant en ${targetLang}. Conserve le ton professionnel et la structure. Adapte les expressions idiomatiques.`,
+        toolName: 'edit',
+      });
+      return;
+    }
     void run(
       [
         ...contextMessages(),
@@ -180,7 +304,102 @@ export function StepWriting({
       ],
       'quality'
     );
-  }, [contextMessages, getSelectionText, run, setError]);
+  }, [
+    contextMessages,
+    directInsertMode,
+    editor,
+    getSelectionText,
+    run,
+    setError,
+    onAiSnapshot,
+  ]);
+
+  const runFaqShortcut = useCallback(() => {
+    void runShortcutPrompt(
+      SEO_FAQ_PROMPT,
+      `Mot-clé principal: ${brief.focusKeyword || '(non défini)'}\n\nContenu article:\n${getMarkdown()}`
+    );
+  }, [brief.focusKeyword, getMarkdown, runShortcutPrompt]);
+
+  const runIntroShortcut = useCallback(() => {
+    void runShortcutPrompt(
+      SEO_INTRO_PROMPT,
+      `Mot-clé principal: ${brief.focusKeyword || '(non défini)'}\nIntention: ${brief.searchIntent ?? '(non définie)'}\n\nContenu article:\n${getMarkdown()}`
+    );
+  }, [brief.focusKeyword, brief.searchIntent, getMarkdown, runShortcutPrompt]);
+
+  const runHeadlineVariantsShortcut = useCallback(() => {
+    const selected = getSelectionText().trim();
+    if (!selected) {
+      setError('Sélectionnez un H1/H2 pour générer des variantes.');
+      return;
+    }
+    setError(null);
+    void runShortcutPrompt(
+      SEO_HEADLINE_VARIANTS_PROMPT,
+      `Mot-clé principal: ${brief.focusKeyword || '(non défini)'}\nTitre source: ${selected}`,
+      {
+        onComplete: (text) => {
+          const variants = parseHeadlineVariants(text);
+          setHeadlineVariants(variants);
+          setSelectedHeadlineVariant(variants[0] ?? '');
+        },
+      }
+    );
+  }, [
+    brief.focusKeyword,
+    getSelectionText,
+    parseHeadlineVariants,
+    runShortcutPrompt,
+    setError,
+  ]);
+
+  const runAltShortcut = useCallback(() => {
+    if (!altPrompt.trim()) {
+      setError("Décrivez l'image pour générer un ALT.");
+      return;
+    }
+    setError(null);
+    void runShortcutPrompt(
+      SEO_ALT_TEXT_PROMPT,
+      `Mot-clé principal: ${brief.focusKeyword || '(non défini)'}\nContexte article:\n${getMarkdown()}\n\nDescriptif image: ${altPrompt}`,
+      {
+        onComplete: (text) => {
+          const match = /ALT:\s*(.+)/i.exec(text);
+          setAltResult(match?.[1]?.trim() ?? text.trim());
+        },
+      }
+    );
+  }, [
+    altPrompt,
+    brief.focusKeyword,
+    getMarkdown,
+    runShortcutPrompt,
+    setError,
+  ]);
+
+  function insertShortcutOutputAtStart() {
+    if (!output.trim()) return;
+    insertMarkdownAtDocumentStart(editor, output.trim());
+    toast.success('Inséré au début');
+  }
+
+  function insertShortcutOutputAtEnd() {
+    if (!output.trim()) return;
+    insertMarkdownAtDocumentEnd(editor, output.trim());
+    toast.success('Inséré à la fin');
+  }
+
+  function replaceSelectionWithVariant() {
+    if (!selectedHeadlineVariant.trim()) return;
+    const sel = editor.selection;
+    if (!sel) {
+      toast.error('Sélection introuvable pour remplacer le titre');
+      return;
+    }
+    editor.tf.insertText(selectedHeadlineVariant, { at: sel });
+    toast.success('Titre remplacé');
+  }
 
   const runSectionForIndex = useCallback(
     async (idx: number) => {
@@ -218,6 +437,25 @@ export function StepWriting({
         'Rédige le contenu de cette section en puisant dans les sources fournies. Markdown. 2-4 paragraphes par sous-section si H3. Ne répète pas le titre H2 en ligne seule si déjà présent dans l’article.',
       ].join('\n');
 
+      if (directInsertMode) {
+        const h2Paths = collectH2Paths(editor);
+        const h2Path = h2Paths[idx];
+        if (!h2Path) {
+          toast.error('H2 cible introuvable dans l’éditeur');
+          return;
+        }
+        editor.tf.select(editor.api.end(h2Path));
+        onAiSnapshot?.('ai-insert', `Rédiger section: ${sec.h2}`);
+        void editor.getApi(AIChatPlugin).aiChat.submit(userBlock, {
+          mode: 'insert',
+          prompt: SEO_SECTION_FROM_KB_PROMPT,
+          toolName: 'generate',
+        });
+        setSectionLoading(false);
+        sectionAbortRef.current = null;
+        return;
+      }
+
       try {
         const usedFallback = await streamAiChatWithFallback({
           provider,
@@ -248,11 +486,14 @@ export function StepWriting({
     },
     [
       brief.focusKeyword,
+      directInsertMode,
       docValue,
+      editor,
       knowledgeBase,
       provider,
       sections,
       setProvider,
+      onAiSnapshot,
     ]
   );
 
@@ -346,7 +587,10 @@ export function StepWriting({
         )}
       </div>
 
-      {(activeSectionIdx !== null || sectionLoading || sectionOut.length > 0) && (
+      {seoPanel}
+
+      {!directInsertMode &&
+        (activeSectionIdx !== null || sectionLoading || sectionOut.length > 0) && (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
             {sectionLoading && (
@@ -409,6 +653,14 @@ export function StepWriting({
               OpenAI
             </button>
           </div>
+          <label className="border-border bg-muted/40 text-foreground inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs">
+            <Checkbox
+              checked={directInsertMode}
+              onCheckedChange={(checked) => setDirectInsertMode(checked === true)}
+              aria-label="Mode insertion directe"
+            />
+            Mode insertion directe
+          </label>
         </div>
         <div className="mb-2 flex flex-wrap gap-1.5">
           <Button
@@ -452,6 +704,82 @@ export function StepWriting({
             Traduire
           </Button>
         </div>
+        <div className="mb-2 rounded-md border border-border bg-muted/20 p-2">
+          <p className="text-foreground mb-2 text-xs font-medium">
+            Raccourcis rédaction
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-7 text-xs"
+              disabled={busy}
+              onClick={runFaqShortcut}
+            >
+              Générer FAQ
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-7 text-xs"
+              disabled={busy}
+              onClick={runIntroShortcut}
+            >
+              Générer Intro
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-7 text-xs"
+              disabled={busy}
+              onClick={runHeadlineVariantsShortcut}
+            >
+              Variantes H1/H2
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-7 text-xs"
+              disabled={busy}
+              onClick={() => setAltModalOpen(true)}
+            >
+              ALT text
+            </Button>
+          </div>
+        </div>
+        {headlineVariants.length > 0 && (
+          <div className="mb-2 rounded-md border border-border bg-muted/20 p-2">
+            <p className="mb-1 text-xs font-medium text-foreground">
+              Variantes de titre
+            </p>
+            <div className="space-y-1">
+              {headlineVariants.map((variant) => (
+                <label key={variant} className="flex items-start gap-2 text-xs">
+                  <input
+                    type="radio"
+                    name="headline-variant"
+                    checked={selectedHeadlineVariant === variant}
+                    onChange={() => setSelectedHeadlineVariant(variant)}
+                  />
+                  <span>{variant}</span>
+                </label>
+              ))}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={replaceSelectionWithVariant}
+            >
+              Remplacer dans l'éditeur
+            </Button>
+          </div>
+        )}
         <Textarea
           ref={promptRef}
           placeholder="Consigne libre (contexte article + base de connaissances inclus)…"
@@ -497,11 +825,65 @@ export function StepWriting({
           </p>
         )}
         {output && (
-          <pre className="border-border bg-muted/40 mt-3 max-h-[min(40vh,320px)] overflow-auto rounded-md border p-3 whitespace-pre-wrap font-sans text-xs leading-relaxed">
-            {output}
-          </pre>
+          <div className="mt-3 space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={insertShortcutOutputAtStart}
+              >
+                Insérer au début
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={insertShortcutOutputAtEnd}
+              >
+                Insérer à la fin
+              </Button>
+            </div>
+            <pre className="border-border bg-muted/40 max-h-[min(40vh,320px)] overflow-auto rounded-md border p-3 whitespace-pre-wrap font-sans text-xs leading-relaxed">
+              {output}
+            </pre>
+          </div>
         )}
       </div>
+      <Dialog open={altModalOpen} onOpenChange={setAltModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Générer un ALT text</DialogTitle>
+            <DialogDescription>
+              Décrivez l’image et générez un ALT (max 125 caractères).
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={altPrompt}
+            onChange={(e) => setAltPrompt(e.target.value)}
+            placeholder="Ex: Photo d'un avocat en consultation avec son client dans un cabinet moderne"
+            className="min-h-[88px] text-sm"
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={runAltShortcut} disabled={busy}>
+              Générer
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!altResult}
+              onClick={() => void navigator.clipboard.writeText(altResult)}
+            >
+              Copier
+            </Button>
+          </div>
+          {altResult && (
+            <p className="rounded-md border border-border bg-muted/30 p-2 text-xs">
+              {altResult}
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

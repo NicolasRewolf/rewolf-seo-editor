@@ -66,6 +66,12 @@ body {
 export type BuildArticleHtmlOptions = {
   /** Injecte des styles typographiques (recommandé pour l'aperçu). */
   embedStyles?: boolean;
+  seoMetadata?: {
+    focusKeyword?: string;
+    jsonLd?: object | null;
+    ogImage?: string;
+    canonicalUrl?: string;
+  };
 };
 
 /**
@@ -79,6 +85,17 @@ export function buildArticleHtmlDocument(
   const body = marked.parse(markdown, { async: false }) as string;
   const title = escapeHtmlAttr(meta.metaTitle || 'Article');
   const desc = escapeHtmlAttr(meta.metaDescription || '');
+  const seo = options?.seoMetadata;
+  const canonical = seo?.canonicalUrl?.trim() ?? '';
+  const ogImage = seo?.ogImage?.trim() ?? '';
+  const escapedCanonical = canonical ? escapeHtmlAttr(canonical) : '';
+  const escapedOgImage = ogImage ? escapeHtmlAttr(ogImage) : '';
+  const escapedOgTitle = title;
+  const escapedOgDesc = desc;
+  const jsonLdScript =
+    seo?.jsonLd && typeof seo.jsonLd === 'object'
+      ? `<script type="application/ld+json">\n${JSON.stringify(seo.jsonLd, null, 2)}\n</script>\n`
+      : '';
   const styleBlock = options?.embedStyles
     ? `<style>\n${ARTICLE_EXPORT_BASE_CSS}\n</style>\n`
     : '';
@@ -89,11 +106,22 @@ export function buildArticleHtmlDocument(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title}</title>
 <meta name="description" content="${desc}">
+${escapedCanonical ? `<link rel="canonical" href="${escapedCanonical}">` : ''}
+<meta property="og:title" content="${escapedOgTitle}">
+<meta property="og:description" content="${escapedOgDesc}">
+<meta property="og:type" content="article">
+${escapedCanonical ? `<meta property="og:url" content="${escapedCanonical}">` : ''}
+${escapedOgImage ? `<meta property="og:image" content="${escapedOgImage}">` : ''}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escapedOgTitle}">
+<meta name="twitter:description" content="${escapedOgDesc}">
+${escapedOgImage ? `<meta name="twitter:image" content="${escapedOgImage}">` : ''}
 ${styleBlock}</head>
 <body>
 <article class="rewolf-article">
 ${body}
 </article>
+${jsonLdScript}
 </body>
 </html>
 `;

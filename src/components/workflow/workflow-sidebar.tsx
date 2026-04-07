@@ -5,6 +5,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { StepFinalize } from '@/components/workflow/steps/step-finalize';
 import { StepOutline } from '@/components/workflow/steps/step-outline';
 import { StepWriting } from '@/components/workflow/steps/step-writing';
+import { WritingSeoPanel } from '@/components/workflow/steps/writing-seo-panel';
 import type { ArticleBrief, ArticleMeta } from '@/types/article';
 import type { InternalLinksMap } from '@/types/internal-links';
 import type { KnowledgeBase } from '@/types/knowledge-base';
@@ -31,6 +32,7 @@ export type WorkflowSidebarProps = {
   headings: { level: number; text: string }[];
   userPlainText: string;
   onSaveToDisk?: () => void;
+  onAiSnapshot?: (kind: 'ai-insert' | 'ai-rewrite', label?: string) => void;
 };
 
 export function WorkflowSidebar(props: WorkflowSidebarProps) {
@@ -50,6 +52,7 @@ export function WorkflowSidebar(props: WorkflowSidebarProps) {
     headings,
     userPlainText,
     onSaveToDisk,
+    onAiSnapshot,
   } = props;
 
   switch (step) {
@@ -77,6 +80,14 @@ export function WorkflowSidebar(props: WorkflowSidebarProps) {
           getMarkdown={getMarkdown}
           getSelectionText={getSelectionText}
           headings={headings}
+          seoPanel={
+            <WritingSeoPanel
+              seoAnalysis={seoAnalysis}
+              knowledgeBase={knowledgeBase}
+              plainText={userPlainText}
+            />
+          }
+          onAiSnapshot={onAiSnapshot}
         />
       );
     case 'finalize':

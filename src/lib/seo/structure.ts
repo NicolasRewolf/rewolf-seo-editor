@@ -1,13 +1,57 @@
 import type { SeoAnalysisPayload, SeoCriterion, SeoDimensionResult } from '@/types/seo';
 
-function headingIntervalsOk(
-  headings: { level: number; text: string }[],
+function headingIntervalsCheck(
+  headings: { level: number; text: string; wordOffset: number }[],
   wordCount: number
-): { ok: boolean; detail: string } {
-  if (headings.length < 2 || wordCount < 100) {
-    return { ok: true, detail: 'Pas assez de contenu pour mesurer les intervalles.' };
+): { status: 'ok' | 'warn' | 'bad'; detail: string } {
+  const scopedHeadings = headings.filter((heading) => heading.level >= 2);
+  if (scopedHeadings.length < 2 || wordCount < 150) {
+    return {
+      status: 'warn',
+      detail: 'Pas assez de repères pour mesurer les intervalles de sections.',
+    };
   }
-  return { ok: true, detail: 'À affiner avec repères de mots par section (objectif 200–300 mots).' };
+
+  const intervals: Array<{
+    from: string;
+    to: string;
+    words: number;
+  }> = [];
+  for (let i = 0; i < scopedHeadings.length - 1; i++) {
+    const current = scopedHeadings[i];
+    const next = scopedHeadings[i + 1];
+    intervals.push({
+      from: current.text || `Titre ${i + 1}`,
+      to: next.text || `Titre ${i + 2}`,
+      words: Math.max(0, next.wordOffset - current.wordOffset),
+    });
+  }
+
+  const inTarget = intervals.filter(
+    (entry) => entry.words >= 150 && entry.words <= 350
+  );
+  const ratio = inTarget.length / intervals.length;
+
+  const firstLong = intervals.find((entry) => entry.words > 350);
+  if (firstLong) {
+    return {
+      status: ratio >= 0.7 ? 'warn' : 'bad',
+      detail: `Section "${firstLong.from}" trop longue (${firstLong.words} mots) — ajoutez un sous-titre.`,
+    };
+  }
+
+  const firstShort = intervals.find((entry) => entry.words < 150);
+  if (firstShort) {
+    return {
+      status: ratio >= 0.7 ? 'warn' : 'bad',
+      detail: `Section "${firstShort.from}" trop courte (${firstShort.words} mots) — fusionnez ou enrichissez.`,
+    };
+  }
+
+  return {
+    status: ratio === 1 ? 'ok' : ratio >= 0.7 ? 'warn' : 'bad',
+    detail: `${Math.round(ratio * 100)} % des intervalles sont entre 150 et 350 mots.`,
+  };
 }
 
 export function analyzeStructure(p: SeoAnalysisPayload): SeoDimensionResult {
@@ -46,12 +90,12 @@ export function analyzeStructure(p: SeoAnalysisPayload): SeoDimensionResult {
       : 'Hiérarchie cohérente.',
   });
 
-  const { detail: intervalDetail } = headingIntervalsOk(hs, p.wordCount);
+  const interval = headingIntervalsCheck(p.headingsWithWordOffsets, p.wordCount);
   criteria.push({
     id: 'heading-interval',
-    label: 'Titres tous les 200–300 mots (indicatif)',
-    status: p.wordCount < 150 ? 'warn' : 'ok',
-    detail: intervalDetail,
+    label: 'Intervalles de sections (150–350 mots)',
+    status: interval.status,
+    detail: interval.detail,
   });
 
   const intOk = p.internalLinks >= 2 && p.internalLinks <= 6;

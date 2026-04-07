@@ -30,6 +30,7 @@ type EnrichMetaJsonldSectionProps = {
   brief: ArticleBrief;
   getMarkdown: () => string;
   onMetaChange: (m: ArticleMeta) => void;
+  onJsonLdChange?: (jsonld: object | null) => void;
 };
 
 export function EnrichMetaJsonldSection({
@@ -37,6 +38,7 @@ export function EnrichMetaJsonldSection({
   brief,
   getMarkdown,
   onMetaChange,
+  onJsonLdChange,
 }: EnrichMetaJsonldSectionProps) {
   const [provider, setProvider] = useState<AiProvider>('anthropic');
   const [metaObj, setMetaObj] = useState<MetaScored | null>(null);
@@ -64,17 +66,20 @@ export function EnrichMetaJsonldSection({
 
   const runJsonLdBundle = useCallback(async () => {
     setJsonld(null);
+    onJsonLdChange?.(null);
     setJsonldLoading(true);
     try {
       const ctx = buildArticleContextBlock(meta, brief, getMarkdown());
       const obj = await aiGenerateObject('jsonld-bundle', ctx, provider);
-      setJsonld(obj != null && typeof obj === 'object' ? obj : null);
+      const normalized = obj != null && typeof obj === 'object' ? obj : null;
+      setJsonld(normalized);
+      onJsonLdChange?.(normalized);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur JSON-LD');
     } finally {
       setJsonldLoading(false);
     }
-  }, [brief, getMarkdown, meta, provider]);
+  }, [brief, getMarkdown, meta, onJsonLdChange, provider]);
 
   async function copyJsonLd() {
     if (!jsonld) return;

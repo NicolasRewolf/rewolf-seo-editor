@@ -16,6 +16,7 @@ import type { InternalLinksMap } from '@/types/internal-links';
 import type { KnowledgeBase } from '@/types/knowledge-base';
 import type { SeoAnalysisResult } from '@/types/seo';
 import type { Value } from 'platejs';
+import { useState } from 'react';
 
 type StepFinalizeProps = {
   meta: ArticleMeta;
@@ -44,6 +45,8 @@ export function StepFinalize({
   editorContent,
   onSaveToDisk,
 }: StepFinalizeProps) {
+  const [jsonLdBundle, setJsonLdBundle] = useState<object | null>(null);
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col px-2 py-2">
       <Tabs
@@ -114,6 +117,7 @@ export function StepFinalize({
             brief={brief}
             getMarkdown={getMarkdown}
             onMetaChange={onMetaChange}
+            onJsonLdChange={setJsonLdBundle}
           />
         </TabsContent>
 
@@ -123,9 +127,11 @@ export function StepFinalize({
         >
           <ExportActions
             meta={meta}
+            brief={brief}
             getMarkdown={getMarkdown}
             editorContent={editorContent}
             onSaveToDisk={onSaveToDisk}
+            jsonLdBundle={jsonLdBundle}
           />
         </TabsContent>
       </Tabs>

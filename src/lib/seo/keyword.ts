@@ -1,6 +1,7 @@
 import type { SeoAnalysisPayload, SeoCriterion, SeoDimensionResult } from '@/types/seo';
+import { stemFr } from '@/lib/seo/stem-fr';
 
-function norm(s: string): string {
+export function norm(s: string): string {
   return s
     .normalize('NFD')
     .replace(/\p{M}/gu, '')
@@ -13,7 +14,7 @@ function containsKeyword(haystack: string, kw: string): boolean {
   return norm(haystack).includes(norm(kw));
 }
 
-function countPhraseInText(plain: string, kw: string): number {
+export function countPhraseInText(plain: string, kw: string): number {
   if (!kw.trim()) return 0;
   const p = norm(plain);
   const k = norm(kw);
@@ -36,10 +37,45 @@ function countPhraseInText(plain: string, kw: string): number {
   return n;
 }
 
+function tokenizeAndStem(text: string): string[] {
+  return norm(text)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map((token) => stemFr(token))
+    .filter(Boolean);
+}
+
+export function countPhraseInTextStemmed(plain: string, kw: string): number {
+  if (!kw.trim()) return 0;
+
+  const plainTokens = tokenizeAndStem(plain);
+  const keywordTokens = tokenizeAndStem(kw);
+  if (plainTokens.length === 0 || keywordTokens.length === 0) return 0;
+
+  if (keywordTokens.length === 1) {
+    const needle = keywordTokens[0];
+    return plainTokens.filter((token) => token === needle).length;
+  }
+
+  let matches = 0;
+  const width = keywordTokens.length;
+  for (let i = 0; i <= plainTokens.length - width; i++) {
+    let ok = true;
+    for (let j = 0; j < width; j++) {
+      if (plainTokens[i + j] !== keywordTokens[j]) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) matches++;
+  }
+  return matches;
+}
+
 function keywordDensityPercentFixed(plainText: string, kw: string): number {
   const wc = plainText.trim().split(/\s+/).filter(Boolean).length;
   if (!wc || !kw.trim()) return 0;
-  const hits = countPhraseInText(plainText, kw);
+  const hits = countPhraseInTextStemmed(plainText, kw);
   return (hits / wc) * 100;
 }
 

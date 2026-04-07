@@ -37,6 +37,27 @@ function splitParagraphs(text: string): string[] {
     .filter(Boolean);
 }
 
+export function lixScoreFr(text: string): {
+  score: number;
+  grade: 'ok' | 'warn' | 'bad';
+} {
+  const sentences = Math.max(splitSentences(text).length, 1);
+  const words = text.match(/[a-zA-ZÀ-ÿ0-9'-]+/g) ?? [];
+  const wordCount = words.length;
+
+  if (wordCount === 0) {
+    return { score: 0, grade: 'bad' };
+  }
+
+  const longWords = words.filter((word) => word.length > 6).length;
+  const score = wordCount / sentences + (longWords * 100) / wordCount;
+
+  const grade: 'ok' | 'warn' | 'bad' =
+    score >= 30 && score <= 45 ? 'ok' : score > 45 && score <= 55 ? 'warn' : 'bad';
+
+  return { score, grade };
+}
+
 export function analyzeReadability(p: SeoAnalysisPayload): SeoDimensionResult {
   const text = p.plainText;
   const criteria: SeoCriterion[] = [];
@@ -49,23 +70,30 @@ export function analyzeReadability(p: SeoAnalysisPayload): SeoDimensionResult {
     fk = 8;
   }
 
-  const fkOk = fk >= 7 && fk <= 9;
-  const fkWarn = (fk >= 5 && fk < 7) || (fk > 9 && fk <= 12);
+  const fkGrade: 'ok' | 'warn' | 'bad' =
+    fk >= 7 && fk <= 9
+      ? 'ok'
+      : (fk >= 5 && fk < 7) || (fk > 9 && fk <= 12)
+        ? 'warn'
+        : 'bad';
+  const { score: lix, grade: lixGrade } = lixScoreFr(text);
+
+  const worstGrade = (a: 'ok' | 'warn' | 'bad', b: 'ok' | 'warn' | 'bad') => {
+    const rank = { ok: 0, warn: 1, bad: 2 } as const;
+    return rank[a] >= rank[b] ? a : b;
+  };
+
   criteria.push({
-    id: 'fk-grade',
-    label: 'Flesch-Kincaid (niveau 7–9 visé)',
+    id: 'readability-grade',
+    label: 'Lisibilité (FK + LIX, cible LIX 30–45)',
     status:
       text.length < 80
         ? 'warn'
-        : fkOk
-          ? 'ok'
-          : fkWarn
-            ? 'warn'
-            : 'bad',
+        : worstGrade(fkGrade, lixGrade),
     detail:
       text.length < 80
         ? 'Texte trop court pour une mesure fiable.'
-        : `Niveau estimé : ${fk.toFixed(1)} (anglais / indicateur).`,
+        : `FK : ${fk.toFixed(1)} · LIX : ${lix.toFixed(1)} (cible 30–45).`,
   });
 
   const sentences = splitSentences(text);

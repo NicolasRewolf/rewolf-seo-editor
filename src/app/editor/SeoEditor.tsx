@@ -12,9 +12,14 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { LoadArticleDialog } from '@/components/article/load-article-dialog';
-import { EditorKit } from '@/components/editor/editor-kit';
+import { HistoryDialog } from '@/components/article/history-dialog';
+import { createEditorKit } from '@/components/editor/editor-kit';
 import { EditorFloatingToolbar } from '@/components/editor/editor-floating-toolbar';
 import { EditorHeadingToolbar } from '@/components/editor/editor-heading-toolbar';
+import {
+  KeywordHighlightPlugin,
+  buildKeywordHighlightTerms,
+} from '@/components/editor/plugins/keyword-highlight-kit';
 import { MetaFields } from '@/components/seo/meta-fields';
 import { DataWorkspace } from '@/app/editor/data/DataWorkspace';
 import { WorkflowSidebar } from '@/components/workflow/workflow-sidebar';
@@ -34,6 +39,11 @@ import {
   saveStoredArticle,
   type StoredArticle,
 } from '@/lib/storage/local-article';
+import {
+  clearOld as clearOldHistory,
+  pushSnapshot,
+  type Snapshot,
+} from '@/lib/storage/history-store';
 import {
   defaultArticleBrief,
   splitLegacyMeta,
@@ -131,9 +141,17 @@ export function SeoEditor() {
   }, [brief]);
 
   const editor = usePlateEditor({
-    plugins: EditorKit,
+    plugins: createEditorKit(),
     value: initial.content,
   });
+
+  useEffect(() => {
+    editor.setOption(
+      KeywordHighlightPlugin,
+      'terms',
+      buildKeywordHighlightTerms(brief.focusKeyword, brief.longTailKeywords)
+    );
+  }, [brief.focusKeyword, brief.longTailKeywords, editor]);
 
   const [competitorWordCount, setCompetitorWordCount] = useState<
     number | undefined
@@ -181,6 +199,7 @@ export function SeoEditor() {
   const [wordCount, setWordCount] = useState(() =>
     countWords(plainTextFromValue(initial.content as Descendant[]))
   );
+  const lastManualSnapshotRef = useRef<string | null>(null);
 
   const debouncedSave = useMemo(
     () =>
@@ -204,6 +223,46 @@ export function SeoEditor() {
       internalLinks: ilRef.current,
     });
   }
+
+  const pushHistorySnapshot = useCallback(
+    async (kind: 'manual' | 'ai-insert' | 'ai-rewrite', label?: string) => {
+      try {
+        await pushSnapshot({
+          slug: metaRef.current.slug,
+          kind,
+          content: editor.children as Value,
+          meta: metaRef.current,
+          brief: briefRef.current,
+          label,
+        });
+        await clearOldHistory(metaRef.current.slug, 20);
+      } catch {
+        /* ignore history errors */
+      }
+    },
+    [editor]
+  );
+
+  const restoreSnapshot = useCallback(
+    (snapshot: Snapshot) => {
+      const normalized = normalizeStaticValue(snapshot.content as Value);
+      editor.tf.setValue(normalized);
+      setDocValue(normalized);
+      setMeta(snapshot.meta);
+      metaRef.current = snapshot.meta;
+      setBrief(snapshot.brief);
+      briefRef.current = snapshot.brief;
+      setWordCount(countWords(plainTextFromValue(normalized as Descendant[])));
+      debouncedSave({
+        meta: snapshot.meta,
+        brief: snapshot.brief,
+        content: normalized,
+        knowledgeBase: kbRef.current,
+        internalLinks: ilRef.current,
+      });
+    },
+    [debouncedSave, editor]
+  );
 
   function persistMeta(next: ArticleMeta) {
     metaRef.current = next;
@@ -293,6 +352,20 @@ export function SeoEditor() {
     };
   }, [searchParams, setSearchParams, applyLoadedArticle]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const fingerprint = JSON.stringify({
+        meta: metaRef.current,
+        brief: briefRef.current,
+        content: editor.children,
+      });
+      if (fingerprint === lastManualSnapshotRef.current) return;
+      lastManualSnapshotRef.current = fingerprint;
+      void pushHistorySnapshot('manual', 'Autosnapshot 5 min');
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [editor, pushHistorySnapshot]);
+
   const editorAndSidebar = (
     <>
       {currentStep === 'finalize' && (
@@ -369,6 +442,9 @@ export function SeoEditor() {
             headings={seoPayload.headings}
             userPlainText={seoPayload.plainText}
             onSaveToDisk={handleSaveToDisk}
+            onAiSnapshot={(kind, label) => {
+              void pushHistorySnapshot(kind, label);
+            }}
           />
         </div>
       </div>
@@ -400,6 +476,7 @@ export function SeoEditor() {
           >
             Enregistrer ./data
           </button>
+          <HistoryDialog slug={meta.slug} onRestore={restoreSnapshot} />
           <LoadArticleDialog onLoad={applyLoadedArticle} />
         </div>
       </header>

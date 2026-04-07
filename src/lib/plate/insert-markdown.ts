@@ -36,6 +36,28 @@ export function insertMarkdownAfterH2ByIndex(
   return true;
 }
 
+export function insertMarkdownAtDocumentStart(
+  editor: PlateEditor,
+  markdown: string
+): boolean {
+  const api = editor.getApi(MarkdownPlugin);
+  const deserialized = api.markdown.deserialize(markdown) as Value;
+  const nodes = (Array.isArray(deserialized) ? deserialized : [deserialized]) as Descendant[];
+  editor.tf.insertNodes(nodes, { at: [0] });
+  return true;
+}
+
+export function insertMarkdownAtDocumentEnd(
+  editor: PlateEditor,
+  markdown: string
+): boolean {
+  const api = editor.getApi(MarkdownPlugin);
+  const deserialized = api.markdown.deserialize(markdown) as Value;
+  const nodes = (Array.isArray(deserialized) ? deserialized : [deserialized]) as Descendant[];
+  editor.tf.insertNodes(nodes, { at: [editor.children.length] });
+  return true;
+}
+
 /** Remplace tout le document par le markdown désérialisé. */
 export function replaceEditorFromMarkdown(
   editor: PlateEditor,

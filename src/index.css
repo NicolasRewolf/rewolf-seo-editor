@@ -134,3 +134,15 @@
     @apply font-sans;
     }
 }
+
+.kw-focus {
+  background-color: color-mix(in oklab, var(--highlight) 52%, transparent);
+  border-radius: 0.2rem;
+  padding-inline: 0.08rem;
+}
+
+.kw-longtail {
+  background-color: color-mix(in oklab, var(--brand) 24%, transparent);
+  border-radius: 0.2rem;
+  padding-inline: 0.08rem;
+}

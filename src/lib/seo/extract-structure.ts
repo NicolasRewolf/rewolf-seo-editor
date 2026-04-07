@@ -89,12 +89,18 @@ export function buildSeoPayload(
 ): SeoAnalysisPayload {
   const host = siteHost ?? SITE_HOST_DEFAULT;
   const headings: { level: number; text: string }[] = [];
+  const headingsWithWordOffsets: {
+    level: number;
+    text: string;
+    wordOffset: number;
+  }[] = [];
   let firstParagraph = '';
   let gotFirstParagraph = false;
 
   const plainParts: string[] = [];
   const linkStats: LinkStats = { internal: 0, external: 0 };
   const images = { total: 0, missingAlt: 0 };
+  let runningWordCount = 0;
 
   walkDescendants(value, host, linkStats, images);
 
@@ -106,7 +112,13 @@ export function buildSeoPayload(
 
     if (isHeadingType(t)) {
       headings.push({ level: headingLevel(t), text: blockText });
+      headingsWithWordOffsets.push({
+        level: headingLevel(t),
+        text: blockText,
+        wordOffset: runningWordCount,
+      });
       plainParts.push(blockText);
+      runningWordCount += countWords(blockText);
       continue;
     }
 
@@ -116,10 +128,12 @@ export function buildSeoPayload(
         gotFirstParagraph = true;
       }
       plainParts.push(blockText);
+      runningWordCount += countWords(blockText);
       continue;
     }
 
     plainParts.push(blockText);
+    runningWordCount += countWords(blockText);
   }
 
   const plainText = plainParts.filter(Boolean).join('\n\n');
@@ -134,6 +148,7 @@ export function buildSeoPayload(
     titlePx: measureTitleWidthPx(meta.metaTitle),
     metaDescPx: measureMetaDescriptionWidthPx(meta.metaDescription),
     headings,
+    headingsWithWordOffsets,
     firstParagraph,
     wordCount,
     internalLinks: linkStats.internal,

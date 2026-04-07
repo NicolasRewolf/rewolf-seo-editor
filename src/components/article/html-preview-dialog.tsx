@@ -18,18 +18,28 @@ import type { ArticleMeta } from '@/types/article';
 type HtmlPreviewDialogProps = {
   meta: ArticleMeta;
   getMarkdown: () => string;
+  seoMetadata?: {
+    focusKeyword?: string;
+    jsonLd?: object | null;
+    ogImage?: string;
+    canonicalUrl?: string;
+  };
   triggerClassName?: string;
 };
 
 export function HtmlPreviewDialog({
   meta,
   getMarkdown,
+  seoMetadata,
   triggerClassName,
 }: HtmlPreviewDialogProps) {
   const [open, setOpen] = useState(false);
 
   const srcDoc = open
-    ? buildArticleHtmlDocument(meta, getMarkdown(), { embedStyles: true })
+    ? buildArticleHtmlDocument(meta, getMarkdown(), {
+        embedStyles: true,
+        seoMetadata,
+      })
     : '';
 
   return (

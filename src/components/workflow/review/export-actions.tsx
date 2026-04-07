@@ -3,22 +3,26 @@
 import { HtmlPreviewDialog } from '@/components/article/html-preview-dialog';
 import { downloadArticleJson } from '@/lib/storage/local-article';
 import { buildArticleHtmlDocument } from '@/lib/html/export-article-html';
-import type { ArticleMeta } from '@/types/article';
+import type { ArticleBrief, ArticleMeta } from '@/types/article';
 import type { Value } from 'platejs';
 
 type ExportActionsProps = {
   meta: ArticleMeta;
+  brief: ArticleBrief;
   getMarkdown: () => string;
   editorContent: Value;
   /** Enregistrement vers ./data (API) — même logique que le header. */
   onSaveToDisk?: () => void;
+  jsonLdBundle?: object | null;
 };
 
 export function ExportActions({
   meta,
+  brief,
   getMarkdown,
   editorContent,
   onSaveToDisk,
+  jsonLdBundle,
 }: ExportActionsProps) {
   return (
     <div className="flex flex-col gap-2">
@@ -49,6 +53,11 @@ export function ExportActions({
             const md = getMarkdown();
             const html = buildArticleHtmlDocument(meta, md, {
               embedStyles: true,
+              seoMetadata: {
+                focusKeyword: brief.focusKeyword,
+                canonicalUrl: brief.destinationUrl || undefined,
+                jsonLd: jsonLdBundle ?? undefined,
+              },
             });
             const blob = new Blob([html], {
               type: 'text/html;charset=utf-8',
@@ -63,7 +72,15 @@ export function ExportActions({
         >
           Exporter HTML
         </button>
-        <HtmlPreviewDialog meta={meta} getMarkdown={getMarkdown} />
+        <HtmlPreviewDialog
+          meta={meta}
+          getMarkdown={getMarkdown}
+          seoMetadata={{
+            focusKeyword: brief.focusKeyword,
+            canonicalUrl: brief.destinationUrl || undefined,
+            jsonLd: jsonLdBundle ?? undefined,
+          }}
+        />
         <button
           type="button"
           className="border-border bg-background hover:bg-muted inline-flex h-8 items-center rounded-md border px-3 text-sm"

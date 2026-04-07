@@ -39,6 +39,7 @@ export type SeoAnalysisPayload = {
   titlePx: number;
   metaDescPx: number;
   headings: { level: number; text: string }[];
+  headingsWithWordOffsets: { level: number; text: string; wordOffset: number }[];
   firstParagraph: string;
   wordCount: number;
   internalLinks: number;
