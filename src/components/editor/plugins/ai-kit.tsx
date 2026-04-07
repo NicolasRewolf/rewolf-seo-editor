@@ -16,11 +16,12 @@ import { usePluginOption } from 'platejs/react';
 import { AILoadingBar, AIMenu } from '@/components/ui/ai-menu';
 import { AIAnchorElement, AILeaf } from '@/components/ui/ai-node';
 import { usePlateChat } from '@/hooks/use-plate-chat';
+import { apiUrl } from '@/lib/api/base-url';
 
 export const aiChatPlugin = AIChatPlugin.extend({
   options: {
     chatOptions: {
-      api: '/api/ai/command',
+      api: apiUrl('/api/ai/command'),
       body: { provider: 'anthropic' as const, taskGroup: 'quality' as const },
     },
   },

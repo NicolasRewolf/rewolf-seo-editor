@@ -14,22 +14,24 @@ export default defineConfig(({ mode }) => {
   const apiProxyTarget =
     env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8787'
 
+  const apiProxy = {
+    target: apiProxyTarget,
+    changeOrigin: true,
+    /** Flux IA longs : évite 502 côté proxy dev (timeouts par défaut trop courts). */
+    timeout: 600_000,
+    proxyTimeout: 600_000,
+  }
+
   return {
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      '/api': {
-        target: apiProxyTarget,
-        changeOrigin: true,
-      },
+      '/api': apiProxy,
     },
   },
   preview: {
     proxy: {
-      '/api': {
-        target: apiProxyTarget,
-        changeOrigin: true,
-      },
+      '/api': apiProxy,
     },
   },
   resolve: {

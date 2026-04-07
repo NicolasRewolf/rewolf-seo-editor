@@ -6,6 +6,8 @@ import { DefaultChatTransport } from 'ai';
 import { useEditorRef } from 'platejs/react';
 import * as React from 'react';
 
+import { apiUrl } from '@/lib/api/base-url';
+
 /* eslint-disable react-hooks/refs -- createStableChatProxy : lecture chat uniquement via Proxy.get */
 const EMPTY_BODY: Record<string, unknown> = {};
 
@@ -32,7 +34,7 @@ export function usePlateChat() {
   const opts = editor.getOptions(AIChatPlugin) as {
     chatOptions?: { api?: string; body?: Record<string, unknown> };
   };
-  const api = opts.chatOptions?.api ?? '/api/ai/command';
+  const api = opts.chatOptions?.api ?? apiUrl('/api/ai/command');
   const body = opts.chatOptions?.body ?? EMPTY_BODY;
 
   const transport = React.useMemo(

@@ -32,6 +32,21 @@ function stringifyCtx(ctx: unknown): string {
   }
 }
 
+/** Garde-fou : évite requêtes trop massives (502 gateway, erreurs fournisseur). */
+const STREAM_MESSAGE_MAX_CHARS = 110_000;
+
+function clampStreamMessages(
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
+): Array<{ role: 'system' | 'user' | 'assistant'; content: string }> {
+  return messages.map((m) => {
+    if (m.content.length <= STREAM_MESSAGE_MAX_CHARS) return m;
+    return {
+      ...m,
+      content: `${m.content.slice(0, STREAM_MESSAGE_MAX_CHARS)}\n\n[… tronqué côté serveur (${m.content.length} car.) …]`,
+    };
+  });
+}
+
 const streamBodySchema = z
   .object({
     provider: z.enum(['anthropic', 'openai']).optional(),
@@ -323,11 +338,13 @@ aiRoutes.post('/stream', async (c) => {
       return c.json({ error: resolved.error }, 503);
     }
 
+    const messages = clampStreamMessages(body.messages);
+
     if (resolved.provider === 'anthropic') {
       const anthropic = createAnthropic({ apiKey: anthropicKey! });
       const result = streamText({
         model: anthropic(resolved.modelId),
-        messages: body.messages,
+        messages,
         onError: ({ error }) => {
           console.error('[ai/stream] Anthropic', error);
         },
@@ -338,7 +355,7 @@ aiRoutes.post('/stream', async (c) => {
     const openai = createOpenAI({ apiKey: openaiKey! });
     const result = streamText({
       model: openai(resolved.modelId),
-      messages: body.messages,
+      messages,
       onError: ({ error }) => {
         console.error('[ai/stream] OpenAI', error);
       },
