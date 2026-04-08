@@ -2,11 +2,18 @@
 
 import { PlusIcon, SparklesIcon } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  extractLongTailWithLlm,
+  type LongTailSuggestion,
+} from '@/lib/knowledge-base/kb-longtail-llm';
 import { suggestLongTailFromKb } from '@/lib/knowledge-base/kb-longtail';
+import type { AiProvider } from '@/lib/api/stream-ai';
+import { cn } from '@/lib/utils';
 import type {
   ArticleBrief,
   FunnelStage,
@@ -39,6 +46,10 @@ export function StepBrief({
   knowledgeBase,
 }: StepBriefProps) {
   const [longTailInput, setLongTailInput] = useState('');
+  const [llmLoading, setLlmLoading] = useState(false);
+  const [llmDetails, setLlmDetails] = useState<LongTailSuggestion[]>([]);
+  const [longTailLlmProvider, setLongTailLlmProvider] =
+    useState<AiProvider>('openai');
 
   const patch = useCallback(
     (partial: Partial<ArticleBrief>) => {
@@ -56,6 +67,36 @@ export function StepBrief({
     const merged = [...new Set([...brief.longTailKeywords, ...suggested])];
     patch({ longTailKeywords: merged });
   }, [brief.focusKeyword, brief.longTailKeywords, knowledgeBase, patch]);
+
+  const suggestLtLlm = useCallback(async () => {
+    setLlmLoading(true);
+    try {
+      const suggestions = await extractLongTailWithLlm({
+        kb: knowledgeBase,
+        focusKeyword: brief.focusKeyword,
+        provider: longTailLlmProvider,
+      });
+      setLlmDetails(suggestions);
+      const merged = [
+        ...new Set([
+          ...brief.longTailKeywords,
+          ...suggestions.map((s) => s.query),
+        ]),
+      ];
+      patch({ longTailKeywords: merged });
+      toast.success(`${suggestions.length} expressions extraites`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Extraction échouée');
+    } finally {
+      setLlmLoading(false);
+    }
+  }, [
+    brief.focusKeyword,
+    brief.longTailKeywords,
+    knowledgeBase,
+    longTailLlmProvider,
+    patch,
+  ]);
 
   const longTailLines = useMemo(
     () => brief.longTailKeywords.join('\n'),
@@ -223,16 +264,56 @@ export function StepBrief({
           <label className="text-foreground text-sm font-medium">
             Longue traîne (expressions cibles)
           </label>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="h-8 gap-1 text-xs"
-            onClick={suggestLt}
-          >
-            <SparklesIcon className="size-3.5" />
-            Suggérer depuis la KB
-          </Button>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex rounded-md border p-0.5">
+              <button
+                type="button"
+                onClick={() => setLongTailLlmProvider('anthropic')}
+                className={`rounded px-2 py-1 text-xs font-medium ${
+                  longTailLlmProvider === 'anthropic'
+                    ? 'bg-muted text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Anthropic
+              </button>
+              <button
+                type="button"
+                onClick={() => setLongTailLlmProvider('openai')}
+                className={`rounded px-2 py-1 text-xs font-medium ${
+                  longTailLlmProvider === 'openai'
+                    ? 'bg-muted text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                OpenAI
+              </button>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="default"
+              className="h-8 gap-1 text-xs"
+              disabled={
+                llmLoading ||
+                !brief.focusKeyword.trim() ||
+                knowledgeBase.sources.length === 0
+              }
+              onClick={() => void suggestLtLlm()}
+            >
+              <SparklesIcon className="size-3.5" />
+              {llmLoading ? 'Analyse…' : 'Extraire via IA'}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-8 gap-1 text-xs"
+              onClick={suggestLt}
+            >
+              Suggérer (rapide, statistique)
+            </Button>
+          </div>
         </div>
         <Textarea
           value={longTailLines}
@@ -250,6 +331,58 @@ export function StepBrief({
             </span>
           ))}
         </div>
+        {llmDetails.length > 0 && (
+          <div className="border-border max-h-[220px] overflow-auto rounded-md border">
+            <table className="w-full border-collapse text-left text-xs">
+              <thead>
+                <tr className="bg-muted/50 border-b">
+                  <th className="p-2 font-medium">Expression</th>
+                  <th className="p-2 font-medium">Intention</th>
+                  <th className="p-2 font-medium">Difficulté</th>
+                </tr>
+              </thead>
+              <tbody>
+                {llmDetails.map((row, i) => (
+                  <tr key={`${row.query}-${i}`} className="border-b last:border-0">
+                    <td className="p-2 align-top">{row.query}</td>
+                    <td className="p-2 align-top">
+                      <span
+                        className={cn(
+                          'inline-block rounded px-1.5 py-0.5 font-mono text-[10px] uppercase',
+                          row.intent === 'informational' &&
+                            'bg-sky-500/15 text-sky-900 dark:text-sky-100',
+                          row.intent === 'transactional' &&
+                            'bg-violet-500/15 text-violet-900 dark:text-violet-100',
+                          row.intent === 'commercial' &&
+                            'bg-amber-500/15 text-amber-900 dark:text-amber-100',
+                          row.intent === 'navigational' &&
+                            'bg-slate-500/15 text-slate-800 dark:text-slate-200'
+                        )}
+                      >
+                        {row.intent}
+                      </span>
+                    </td>
+                    <td className="p-2 align-top">
+                      <span
+                        className={cn(
+                          'inline-block rounded px-1.5 py-0.5 font-mono text-[10px] uppercase',
+                          row.difficulty === 'low' &&
+                            'bg-emerald-500/15 text-emerald-900 dark:text-emerald-100',
+                          row.difficulty === 'med' &&
+                            'bg-amber-500/15 text-amber-900 dark:text-amber-100',
+                          row.difficulty === 'high' &&
+                            'bg-red-500/15 text-red-900 dark:text-red-100'
+                        )}
+                      >
+                        {row.difficulty}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         <div className="flex gap-2">
           <Input
             value={longTailInput}
