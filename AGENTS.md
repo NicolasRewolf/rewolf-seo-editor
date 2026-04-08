@@ -2,36 +2,76 @@
 
 ## Cursor Cloud specific instructions
 
-### Overview
+### Project overview
 
-REWOLF SEO Editor — a French-language SEO article writing tool with workflow **Data → Brief → Plan → Rédaction → Finaliser**. Single repo, two processes (Vite frontend + Hono API backend), no database (file-based persistence in `data/articles/*.json`).
+REWOLF SEO Editor is a French-language SEO writing application with workflow:
+**Data → Brief → Plan → Redaction → Finaliser**.
 
-### Running the app
+- Monorepo style app in a single package
+- Frontend: Vite + React (`src/`)
+- Backend API: Hono (`server/`)
+- Persistence: JSON files in `data/articles/*.json` (git-ignored)
+- No database and no Docker required
 
-- **Combined start:** `npm run dev:all` (runs both Vite on port 5173 and Hono API on port 8787 via `concurrently`)
-- **Frontend only:** `npm run dev` (port 5173)
-- **Backend only:** `npm run server` (port 8787, uses `tsx watch`)
-- **Health check:** `curl -s http://127.0.0.1:8787/api/health`
+### Quick start (Cloud)
+
+1. Install dependencies: `npm install`
+2. Copy env file once: `cp .env.example .env` (fill keys only if needed)
+3. Start full stack: `npm run dev:all`
+4. Optional API health check: `curl -s http://127.0.0.1:8787/api/health`
+
+Ports:
+- Frontend: `5173`
+- API: `8787`
+
+### Environment notes
+
+- Required file: `.env` at repo root
+- Expected keys: `SERPER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
+- App can run without keys, but AI/SERP routes return errors
+- If `.env` is changed, restart backend (`npm run server`)
 
 ### Standard commands
 
-See `package.json` `scripts` section. Key commands:
-
 | Task | Command |
 |------|---------|
+| Dev (full stack) | `npm run dev:all` |
+| Dev (frontend) | `npm run dev` |
+| Dev (backend) | `npm run server` |
+| API ping | `npm run api:ping` |
 | Lint | `npm run lint` |
-| Test | `npm test` (Vitest) |
-| Build | `npm run build` (`tsc -b && vite build`) |
-| Dev | `npm run dev:all` |
+| Test | `npm test` |
+| Build | `npm run build` |
 
-### Environment
+### Relevant code locations
 
-- `.env` file required at root (copy from `.env.example`). Keys: `SERPER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`.
-- The app starts without API keys, but AI/SERP features return errors. The editor itself works without them.
-- After modifying `.env`, restart `npm run server` (the Hono server does not auto-reload on `.env` changes).
+- App shell: `src/App.tsx`, `src/main.tsx`
+- Editor app code: `src/app/`
+- Reusable UI: `src/components/`
+- API entry: `server/index.ts`
+- API routes: `server/routes/`
+- Shared server helpers: `server/lib/`
+- Utility scripts: `scripts/`
 
-### Caveats
+### Agent workflow expectations
 
-- No Docker, no database, no external services required to run.
-- The Vite dev server sometimes shows an optimizer warning on first load — this is normal and resolves after the initial bundling completes.
-- Articles are saved as JSON to `data/` directory at project root (git-ignored).
+When changing code:
+
+1. Reproduce or identify affected behavior first.
+2. Implement the smallest focused change.
+3. Run targeted checks:
+   - Frontend/UI changes: run app and manually verify the affected flow.
+   - Server changes: verify endpoint behavior (at least health check + touched route).
+   - Shared logic: run related `vitest` tests if present.
+4. Run `npm run lint` when edits touch TypeScript/JavaScript source.
+5. Prefer narrow, high-signal tests over full-suite runs unless required.
+
+When editing docs only:
+
+- No full app run required; verify markdown readability and command accuracy.
+
+### Known caveats
+
+- Vite optimizer warning can appear on first load; usually resolves automatically.
+- `data/` content is runtime output and should stay uncommitted.
+- Backend reload is file-based; `.env` changes are not hot-reloaded.
