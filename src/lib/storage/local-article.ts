@@ -103,21 +103,6 @@ export function saveStoredArticle(article: StoredArticle) {
   localStorage.setItem(ARTICLE_KEY, JSON.stringify(article));
 }
 
-/** @deprecated Utiliser loadStoredArticle */
-export function loadPlateValueFromStorage(): Value | null {
-  return loadStoredArticle()?.content ?? null;
-}
-
-/** @deprecated Utiliser saveStoredArticle */
-export function savePlateValueToStorage(value: Value) {
-  const prev = loadStoredArticle();
-  saveStoredArticle({
-    meta: prev?.meta ?? defaultMeta(),
-    brief: prev?.brief ?? defaultArticleBrief(),
-    content: value,
-  });
-}
-
 /** Téléchargement JSON (équivalent backup manuel vers ./data/) */
 export function downloadArticleJson(
   payload: Record<string, unknown>,
