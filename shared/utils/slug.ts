@@ -1,4 +1,4 @@
-/** Slug URL à partir d'un titre (minuscules, tirets, sans accents). */
+/** Slug URL a partir d'un titre (minuscules, tirets, sans accents). */
 export function slugify(input: string): string {
   return input
     .normalize('NFD')

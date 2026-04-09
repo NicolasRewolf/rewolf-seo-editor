@@ -1,5 +1,6 @@
 'use client';
 
+import { formatDateTimeFr } from '@shared/core';
 import { splitForHighlight } from '@/lib/seo/highlight';
 import type { KbSource } from '@/types/knowledge-base';
 
@@ -35,7 +36,7 @@ export function SourcePreview({ source, focusKeyword }: SourcePreviewProps) {
           </a>
         )}
         <p className="text-muted-foreground font-mono text-xs">
-          {source.wordCount} mots · {new Date(source.addedAt).toLocaleString('fr-FR')}
+          {source.wordCount} mots · {formatDateTimeFr(source.addedAt)}
         </p>
       </div>
       <div className="text-foreground min-h-0 flex-1 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap">

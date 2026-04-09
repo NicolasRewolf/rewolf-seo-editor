@@ -1,4 +1,6 @@
 import type { SeoAnalysisPayload, SeoCriterion, SeoDimensionResult } from '@/types/seo';
+import { lixScoreFr } from '@shared/core';
+export { lixScoreFr } from '@shared/core';
 
 const TRANSITION_FR = [
   'cependant',
@@ -33,27 +35,6 @@ function splitParagraphs(text: string): string[] {
     .split(/\n+/)
     .map((p) => p.trim())
     .filter(Boolean);
-}
-
-export function lixScoreFr(text: string): {
-  score: number;
-  grade: 'ok' | 'warn' | 'bad';
-} {
-  const sentences = Math.max(splitSentences(text).length, 1);
-  const words = text.match(/[a-zA-ZÀ-ÿ0-9'-]+/g) ?? [];
-  const wordCount = words.length;
-
-  if (wordCount === 0) {
-    return { score: 0, grade: 'bad' };
-  }
-
-  const longWords = words.filter((word) => word.length > 6).length;
-  const score = wordCount / sentences + (longWords * 100) / wordCount;
-
-  const grade: 'ok' | 'warn' | 'bad' =
-    score >= 30 && score <= 45 ? 'ok' : score > 45 && score <= 55 ? 'warn' : 'bad';
-
-  return { score, grade };
 }
 
 function estimateSyllables(word: string): number {

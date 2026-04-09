@@ -1,4 +1,5 @@
 import { fetchCompetitorText, searchSerper } from './serp.repository';
+import { countWords } from '@shared/core';
 
 function extractOrganicLinks(data: unknown): string[] {
   if (!data || typeof data !== 'object') return [];
@@ -110,7 +111,7 @@ export async function buildCompetitorCorpus(params: {
       pages.push({ url, wordCount: 0, ok: false, error: r.error });
       continue;
     }
-    const wc = r.text.trim().split(/\s+/).filter(Boolean).length;
+    const wc = countWords(r.text);
     pages.push({ url, wordCount: wc, ok: true, text: r.text });
   }
 

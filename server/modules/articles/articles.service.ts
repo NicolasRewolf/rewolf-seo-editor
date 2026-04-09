@@ -1,4 +1,5 @@
 import { type ArticleBody } from '@shared/core';
+import { nowIso } from '@shared/core';
 import {
   buildStoredArticlePayload,
   fileNamesToSortedSlugs,
@@ -76,7 +77,7 @@ export async function saveArticleBySlug(
       id: existing?.id as string | undefined,
       createdAt: existing?.createdAt as string | undefined,
     };
-    const now = new Date().toISOString();
+    const now = nowIso();
     const payload = buildStoredArticlePayload(body, prev, now);
     await writeArticleRaw(slug, payload);
     return { ok: true, slug };
