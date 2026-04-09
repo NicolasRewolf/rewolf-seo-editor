@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 import { z } from 'zod';
+import { env, isProd } from '../../lib/env';
 import {
   createManagedAgentSession,
   getSessionStatus,
@@ -20,7 +21,7 @@ const sessionCreateSchema = z.object({
 });
 
 export async function createSessionController(c: Context) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return c.json({ error: 'ANTHROPIC_API_KEY non configurée' }, 503);
   }
@@ -40,7 +41,11 @@ export async function createSessionController(c: Context) {
       systemOverride: body.systemOverride,
     });
     if (!result.ok) {
-      console.error(...result.log);
+      if (isProd) {
+        console.error(result.log[0], result.log[1]);
+      } else {
+        console.error(...result.log);
+      }
       return c.json({ error: result.error }, result.status);
     }
     return c.json(result.payload);
@@ -52,7 +57,7 @@ export async function createSessionController(c: Context) {
 }
 
 export async function sessionStreamController(c: Context) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return c.json({ error: 'ANTHROPIC_API_KEY non configurée' }, 503);
   }
@@ -80,7 +85,7 @@ export async function sessionStreamController(c: Context) {
 }
 
 export async function sessionStatusController(c: Context) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return c.json({ error: 'ANTHROPIC_API_KEY non configurée' }, 503);
   }

@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 import { z } from 'zod';
+import { env } from '../../lib/env';
 import { buildCompetitorCorpus, runSerperSearch } from './serp.service';
 
 const bodySchema = z.object({
@@ -18,7 +19,7 @@ const competitorBodySchema = z.object({
 });
 
 export async function searchSerpController(c: Context) {
-  const key = process.env.SERPER_API_KEY;
+  const key = env.SERPER_API_KEY;
   if (!key) {
     return c.json({ error: 'SERPER_API_KEY manquante' }, 503);
   }
@@ -47,7 +48,7 @@ export async function searchSerpController(c: Context) {
 }
 
 export async function competitorCorpusController(c: Context) {
-  const key = process.env.SERPER_API_KEY;
+  const key = env.SERPER_API_KEY;
   if (!key) {
     return c.json({ error: 'SERPER_API_KEY manquante' }, 503);
   }

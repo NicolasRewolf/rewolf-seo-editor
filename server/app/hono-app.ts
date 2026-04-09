@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { handleError, notFoundHandler } from './error-handler';
+import { env } from '../lib/env';
 
 import { agentRoutes } from '../modules/agent/agent.route';
 import { aiRoutes } from '../modules/ai/ai.route';
@@ -11,11 +12,6 @@ import { serpRoutes } from '../modules/serp/serp.route';
 type CreateAppOptions = {
   port: number;
 };
-
-function envConfigured(name: string): boolean {
-  const value = process.env[name];
-  return typeof value === 'string' && value.trim().length > 0;
-}
 
 function isDevBrowserOrigin(origin: string): boolean {
   const isPrivateIpv4 = (hostname: string): boolean => {
@@ -77,9 +73,9 @@ export function createApp({ port }: CreateAppOptions): Hono {
       service: 'rewolf-seo-editor-api',
       port,
       env: {
-        SERPER_API_KEY: envConfigured('SERPER_API_KEY'),
-        ANTHROPIC_API_KEY: envConfigured('ANTHROPIC_API_KEY'),
-        OPENAI_API_KEY: envConfigured('OPENAI_API_KEY'),
+        SERPER_API_KEY: Boolean(env.SERPER_API_KEY),
+        ANTHROPIC_API_KEY: Boolean(env.ANTHROPIC_API_KEY),
+        OPENAI_API_KEY: Boolean(env.OPENAI_API_KEY),
       },
     })
   );

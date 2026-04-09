@@ -19,6 +19,7 @@ import {
   type AiStreamBody,
   type AiTaskGroup,
 } from '@shared/core';
+import { isProd } from '../../lib/env';
 import { generateObjectWithProvider, streamWithProvider } from './ai.repository';
 
 /** Garde-fou : évite requêtes trop massives (502 gateway, erreurs fournisseur). */
@@ -192,10 +193,11 @@ export function runTextStream(params: { body: AiStreamBody; keys: AiKeys }) {
     modelId: resolved.modelId,
     messages,
     onError: (error) => {
+      const detail = error instanceof Error ? error.message : String(error);
       if (resolved.provider === 'anthropic') {
-        console.error('[ai/stream] Anthropic', error);
+        console.error('[ai/stream] Anthropic', isProd ? detail : error);
       } else {
-        console.error('[ai/stream] OpenAI', error);
+        console.error('[ai/stream] OpenAI', isProd ? detail : error);
       }
     },
   });

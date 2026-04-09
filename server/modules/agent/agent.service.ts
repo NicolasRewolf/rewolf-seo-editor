@@ -3,6 +3,7 @@ import {
   fetchSessionStatus,
   fetchSessionStream,
 } from './agent.repository';
+import { env } from '../../lib/env';
 
 const MODEL = 'claude-sonnet-4-6';
 const AGENT_TOOLSET_TYPE = 'agent_toolset_20260401';
@@ -15,9 +16,9 @@ Respecte toujours les consignes de l'utilisateur et produis du contenu optimise
 pour les moteurs de recherche francais.`;
 
 let cachedAgentId: string | null =
-  process.env.ANTHROPIC_MANAGED_AGENT_ID?.trim() || null;
+  env.ANTHROPIC_MANAGED_AGENT_ID ?? null;
 let cachedEnvironmentId: string | null =
-  process.env.ANTHROPIC_MANAGED_ENVIRONMENT_ID?.trim() || null;
+  env.ANTHROPIC_MANAGED_ENVIRONMENT_ID ?? null;
 
 async function ensureEnvironmentId(apiKey: string): Promise<string> {
   if (cachedEnvironmentId) return cachedEnvironmentId;

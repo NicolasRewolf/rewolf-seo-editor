@@ -1,12 +1,13 @@
 import type { Context } from 'hono';
 
 import { aiObjectModeSchema, aiStreamBodySchema, type AiProvider } from '@shared/core';
+import { env } from '../../lib/env';
 import { runCommandStream, runObjectGeneration, runTextStream } from './ai.service';
 
 function getAiKeys() {
   return {
-    anthropicKey: process.env.ANTHROPIC_API_KEY,
-    openaiKey: process.env.OPENAI_API_KEY,
+    anthropicKey: env.ANTHROPIC_API_KEY,
+    openaiKey: env.OPENAI_API_KEY,
   };
 }
 

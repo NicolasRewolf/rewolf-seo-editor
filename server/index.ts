@@ -1,9 +1,8 @@
-import './load-env';
-
 import { serve } from '@hono/node-server';
 import { createApp } from './app/hono-app';
+import { env } from './lib/env';
 
-const PORT = Number(process.env.PORT) || 8787;
+const PORT = env.PORT;
 const app = createApp({ port: PORT });
 
 const server = serve(
