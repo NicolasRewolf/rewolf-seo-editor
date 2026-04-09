@@ -2,56 +2,11 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { Hono } from 'hono';
-import { z } from 'zod';
-
-const SLUG_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,126}$/;
-
-const briefSchema = z.object({
-  focusKeyword: z.string(),
-  longTailKeywords: z.array(z.string()),
-  searchIntent: z
-    .enum(['informational', 'transactional', 'navigational', 'commercial'])
-    .nullable(),
-  funnelStage: z.enum(['awareness', 'consideration', 'decision']).nullable(),
-  targetAudience: z.string(),
-  destinationUrl: z.string(),
-  brandVoice: z.string(),
-  businessGoal: z.string(),
-});
-
-const metaSchema = z.object({
-  metaTitle: z.string(),
-  metaDescription: z.string(),
-  slug: z.string(),
-  slugLocked: z.boolean(),
-  focusKeyword: z.string().optional(),
-});
-
-const competitorSnapshotSchema = z.object({
-  keyword: z.string(),
-  fetchedAt: z.string(),
-  avgWordCount: z.number(),
-  results: z.array(
-    z.object({
-      url: z.string(),
-      title: z.string(),
-      wordCount: z.number(),
-      keywordDensity: z.number(),
-    })
-  ),
-});
-
-const articleBodySchema = z.object({
-  id: z.string().optional(),
-  meta: metaSchema,
-  brief: briefSchema.optional(),
-  content: z.array(z.unknown()),
-  seoScore: z.number().nullable().optional(),
-  competitorData: competitorSnapshotSchema.nullable().optional(),
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
-  exportedAt: z.string().optional(),
-});
+import {
+  articleBodySchema,
+  articleSlugRegex,
+  type ArticleBody,
+} from '../../shared/contracts';
 
 function dataDir(): string {
   return join(process.cwd(), 'data', 'articles');
@@ -62,7 +17,7 @@ function pathForSlug(slug: string): string {
 }
 
 function isValidSlug(slug: string): boolean {
-  return SLUG_RE.test(slug);
+  return articleSlugRegex.test(slug);
 }
 
 export const articlesRoutes = new Hono();
@@ -112,7 +67,7 @@ articlesRoutes.put('/:slug', async (c) => {
     return c.json({ error: 'Slug invalide' }, 400);
   }
 
-  let body: z.infer<typeof articleBodySchema>;
+  let body: ArticleBody;
   try {
     body = articleBodySchema.parse(await c.req.json());
   } catch {

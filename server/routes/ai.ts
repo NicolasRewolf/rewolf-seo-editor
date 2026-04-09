@@ -7,19 +7,27 @@ import {
   type UIMessage,
 } from 'ai';
 import { Hono } from 'hono';
-import { z } from 'zod';
 
 import {
   resolveCommandRouting,
   resolveObjectModelRouting,
   resolveStreamRouting,
-} from '../lib/ai-model-routing';
+} from '../../shared/ai';
 import {
   SEO_EDITOR_PROMPT,
   SEO_JSONLD_BUNDLE_PROMPT,
   SEO_JSONLD_PROMPT,
   SEO_META_PROMPT,
-} from '../lib/prompts';
+} from '../../shared/ai';
+import {
+  aiJsonLdBlogSchema,
+  aiJsonLdBundleSchema,
+  aiMetaScoredObjectSchema,
+  aiObjectModeSchema,
+  aiStreamBodySchema,
+  type AiProvider,
+  type AiStreamBody,
+} from '../../shared/contracts';
 
 function stringifyCtx(ctx: unknown): string {
   if (ctx == null) return '';
@@ -47,104 +55,6 @@ function clampStreamMessages(
   });
 }
 
-const streamBodySchema = z
-  .object({
-    provider: z.enum(['anthropic', 'openai']).optional(),
-    taskGroup: z.enum(['fast', 'quality']).optional(),
-    model: z.string().optional(),
-    messages: z
-      .array(
-        z.object({
-          role: z.enum(['system', 'user', 'assistant']),
-          content: z.string(),
-        })
-      )
-      .min(1),
-  })
-  .refine((d) => d.taskGroup != null || d.provider != null, {
-    message: 'provider ou taskGroup requis',
-    path: ['provider'],
-  });
-
-const metaScoredSchema = z.object({
-  titleVariants: z
-    .array(
-      z.object({
-        text: z.string(),
-        length: z.number(),
-        score: z.number().min(0).max(100),
-        reason: z.string(),
-      })
-    )
-    .min(3)
-    .max(3),
-  descriptionVariants: z
-    .array(
-      z.object({
-        text: z.string(),
-        length: z.number(),
-        score: z.number().min(0).max(100),
-        reason: z.string(),
-      })
-    )
-    .min(3)
-    .max(3),
-});
-
-/** Aligné sur schema.org BlogPosting (types TS via schema-dts côté client). */
-const jsonLdBlogSchema = z.object({
-  '@context': z.literal('https://schema.org'),
-  '@type': z.literal('BlogPosting'),
-  headline: z.string(),
-  description: z.string(),
-  datePublished: z.string().optional(),
-  dateModified: z.string().optional(),
-  url: z.string().optional(),
-  author: z
-    .object({
-      '@type': z.literal('Person'),
-      name: z.string(),
-    })
-    .optional(),
-});
-
-const faqMainEntitySchema = z.object({
-  '@type': z.literal('Question'),
-  name: z.string(),
-  acceptedAnswer: z.object({
-    '@type': z.literal('Answer'),
-    text: z.string(),
-  }),
-});
-
-const jsonLdFaqPageSchema = z.object({
-  '@context': z.literal('https://schema.org'),
-  '@type': z.literal('FAQPage'),
-  mainEntity: z.array(faqMainEntitySchema).min(1).max(12),
-});
-
-const jsonLdHowToSchema = z.object({
-  '@context': z.literal('https://schema.org'),
-  '@type': z.literal('HowTo'),
-  name: z.string(),
-  step: z
-    .array(
-      z.object({
-        '@type': z.literal('HowToStep'),
-        name: z.string(),
-        text: z.string(),
-      })
-    )
-    .min(1)
-    .max(20),
-});
-
-const jsonLdBundleSchema = z.object({
-  blogPosting: jsonLdBlogSchema,
-  faqPage: jsonLdFaqPageSchema.optional(),
-  howTo: jsonLdHowToSchema.optional(),
-});
-
 export const aiRoutes = new Hono();
 
 /**
@@ -169,8 +79,12 @@ aiRoutes.post('/command', async (c) => {
     typeof raw.body === 'object' && raw.body
       ? (raw.body as Record<string, unknown>)
       : null;
-  const providerPref =
+  const providerRaw =
     (raw.provider as string | undefined) ?? (mergedBody?.provider as string | undefined);
+  const providerPref: AiProvider | undefined =
+    providerRaw === 'anthropic' || providerRaw === 'openai'
+      ? providerRaw
+      : undefined;
   const taskGroupRaw =
     (raw.taskGroup as string | undefined) ??
     (mergedBody?.taskGroup as string | undefined);
@@ -241,7 +155,9 @@ aiRoutes.post('/object', async (c) => {
     return c.json({ error: 'JSON invalide' }, 400);
   }
 
-  const mode = raw.mode as string | undefined;
+  const modeRaw = raw.mode as string | undefined;
+  const modeParse = aiObjectModeSchema.safeParse(modeRaw);
+  const mode = modeParse.success ? modeParse.data : undefined;
   const context = raw.context as string | undefined;
   const modelOverride = raw.model as string | undefined;
 
@@ -271,7 +187,7 @@ aiRoutes.post('/object', async (c) => {
     if (mode === 'meta-scored') {
       const { object } = await generateObject({
         model,
-        schema: metaScoredSchema,
+        schema: aiMetaScoredObjectSchema,
         schemaName: 'MetaVariantsScored',
         schemaDescription:
           'Trois titres et trois descriptions meta avec score SEO 0–100 et longueur.',
@@ -284,7 +200,7 @@ aiRoutes.post('/object', async (c) => {
     if (mode === 'jsonld-blog') {
       const { object } = await generateObject({
         model,
-        schema: jsonLdBlogSchema,
+        schema: aiJsonLdBlogSchema,
         schemaName: 'BlogPostingJsonLd',
         schemaDescription: 'JSON-LD BlogPosting schema.org',
         system: SEO_JSONLD_PROMPT,
@@ -296,7 +212,7 @@ aiRoutes.post('/object', async (c) => {
     if (mode === 'jsonld-bundle') {
       const { object } = await generateObject({
         model,
-        schema: jsonLdBundleSchema,
+        schema: aiJsonLdBundleSchema,
         schemaName: 'SeoJsonLdBundle',
         schemaDescription:
           'BlogPosting obligatoire ; FAQPage et HowTo seulement si le contenu le justifie.',
@@ -317,9 +233,9 @@ aiRoutes.post('/object', async (c) => {
 });
 
 aiRoutes.post('/stream', async (c) => {
-  let body: z.infer<typeof streamBodySchema>;
+  let body: AiStreamBody;
   try {
-    body = streamBodySchema.parse(await c.req.json());
+    body = aiStreamBodySchema.parse(await c.req.json());
   } catch {
     return c.json({ error: 'Corps JSON invalide' }, 400);
   }
