@@ -47,7 +47,7 @@ if (hasFlag('--help') || hasFlag('-h')) {
   console.log(`
 Usage: node scripts/agents/run-agent.mjs --task <type> [--desc "..."] [--file src/...]
 
-Types: test-generate | test-fix | feature | maintain
+Types: test-generate | test-fix | feature | maintain | qa-copywriter | benchmark
 
 Options:
   --task    Type de tâche (obligatoire)
@@ -63,7 +63,7 @@ if (!task) {
   process.exit(1);
 }
 
-const validTasks = ['test-generate', 'test-fix', 'feature', 'maintain'];
+const validTasks = ['test-generate', 'test-fix', 'feature', 'maintain', 'qa-copywriter', 'benchmark'];
 if (!validTasks.includes(task)) {
   console.error(`[agent] Tâche inconnue : "${task}". Valeurs valides : ${validTasks.join(', ')}`);
   process.exit(1);
