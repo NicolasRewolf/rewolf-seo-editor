@@ -7,6 +7,9 @@
   "exports": {
     ".": "./index.ts"
   },
+  "scripts": {
+    "test": "vitest run --root .. --config vitest.config.ts"
+  },
   "dependencies": {
     "zod": "^4.3.6"
   }
