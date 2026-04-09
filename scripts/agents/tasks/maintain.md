@@ -25,6 +25,14 @@ fi
 cd "$WORKDIR"
 pwd
 ls
+
+# Injecter les clés runtime dans le workspace cloud (si disponibles)
+cat > .env <<'EOF'
+ANTHROPIC_API_KEY={{anthropic_api_key}}
+OPENAI_API_KEY={{openai_api_key}}
+SERPER_API_KEY={{serper_api_key}}
+EOF
+
 npm ci
 ```
 

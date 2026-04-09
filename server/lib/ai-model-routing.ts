@@ -1,4 +1,4 @@
-export const DEFAULT_ANTHROPIC = 'claude-sonnet-4-5-20250514';
+export const DEFAULT_ANTHROPIC = 'claude-sonnet-4-6';
 export const DEFAULT_OPENAI = 'gpt-4.1-mini';
 
 /** Routage Sonnet (rédaction) vs mini (tâches courtes / structuré). */

@@ -19,6 +19,39 @@ frotte, ce qui manque, ce qui est lent ou confus, et produire un rapport structu
 **Tu n'as pas accès à l'UI**. Tu travailles directement via l'API Hono (port 8787)
 et le code source. C'est intentionnel : tu testes la robustesse du moteur, pas l'interface.
 
+## Règle non négociable : TOOL-ONLY REWOLF
+
+Tu dois utiliser UNIQUEMENT les outils/endpoints REWOLF pour toutes les étapes produit :
+- `/api/health`
+- `/api/serp/search`
+- `/api/reader`
+- `/api/ai/stream`
+- `/api/ai/object`
+
+Interdits :
+- `web_fetch`, `web_search`, ou toute récupération web hors `/api/reader`
+- génération IA hors `/api/ai/stream` ou `/api/ai/object`
+- fallback "capacité native" si une route échoue
+
+Si un endpoint échoue ou si une clé API manque, tu t'arrêtes avec un **BLOCKER** explicite
+au lieu d'improviser.
+
+## Mode d'exécution : PEIGNE FIN + FAIL-FAST
+
+Tu dois tester les fonctionnalités une par une, dans l'ordre, avec preuve de résultat.
+
+Définition de "comportement étrange" (BLOCKER immédiat) :
+- HTTP non-2xx sur un endpoint requis
+- réponse vide ou non-JSON quand JSON attendu
+- schéma de réponse incohérent (champ critique manquant)
+- latence excessive (> 20s) sans stream utile
+- résultat manifestement hors sujet par rapport à l'étape
+
+Règle :
+- Au premier comportement étrange, ARRÊTE-TOI immédiatement.
+- Publie un bloc `BLOCKER` avec : endpoint, payload, extrait réponse, hypothèse cause.
+- N'essaie jamais de contourner via un autre outil.
+
 ## Contrainte absolue (très important)
 
 - N'initialise JAMAIS un nouveau projet.
@@ -40,7 +73,29 @@ fi
 cd "$WORKDIR"
 pwd
 ls
+
+# Injecter les clés runtime dans le workspace cloud (si disponibles)
+export ANTHROPIC_API_KEY="{{anthropic_api_key}}"
+export OPENAI_API_KEY="{{openai_api_key}}"
+export SERPER_API_KEY="{{serper_api_key}}"
+
+cat > .env <<'EOF'
+ANTHROPIC_API_KEY={{anthropic_api_key}}
+OPENAI_API_KEY={{openai_api_key}}
+SERPER_API_KEY={{serper_api_key}}
+EOF
+
 npm ci
+
+# Préflight strict : clés obligatoires pour QA tool-only
+if [ -z "$SERPER_API_KEY" ]; then
+  echo "BLOCKER: SERPER_API_KEY manquante"
+  exit 42
+fi
+if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$OPENAI_API_KEY" ]; then
+  echo "BLOCKER: ANTHROPIC_API_KEY ou OPENAI_API_KEY manquante"
+  exit 42
+fi
 ```
 
 Si ce bootstrap échoue, ARRÊTE-TOI et renvoie un blocage clair (ne pas scaffold).
@@ -62,6 +117,8 @@ curl -s http://127.0.0.1:8787/api/health
 ```
 
 Note : quelles clés API sont disponibles (Anthropic, OpenAI, Serper) ?
+Si `SERPER_API_KEY` est absente, ou si `ANTHROPIC_API_KEY` et `OPENAI_API_KEY` sont
+toutes deux absentes, arrête-toi avec un BLOCKER.
 
 ---
 
@@ -70,7 +127,7 @@ Note : quelles clés API sont disponibles (Anthropic, OpenAI, Serper) ?
 ```bash
 curl -s -X POST http://127.0.0.1:8787/api/serp/search \
   -H "Content-Type: application/json" \
-  -d '{"query": "{{desc}}", "gl": "fr", "hl": "fr", "num": 10}'
+  -d '{"q": "{{desc}}", "gl": "fr", "hl": "fr", "num": 10}'
 ```
 
 **Observer et noter :**
@@ -81,20 +138,76 @@ curl -s -X POST http://127.0.0.1:8787/api/serp/search \
 
 ---
 
+## Étape 1b — Corpus concurrent (SERP enrichi)
+
+```bash
+curl -s -X POST http://127.0.0.1:8787/api/serp/competitor-corpus \
+  -H "Content-Type: application/json" \
+  -d '{"q": "{{desc}}", "gl": "fr", "hl": "fr", "num": 10, "maxFetch": 3}'
+```
+
+**Observer :**
+- `organicUrls` présent et non vide
+- `pages` présent avec au moins 1 `ok: true`
+- `wordCount` cohérent (> 200 si page longue)
+
+---
+
 ## Étape 2 — Extraction d'une source concurrente (Reader)
 
 Prendre la première URL des résultats SERP et l'extraire :
 
 ```bash
-curl -s -X POST http://127.0.0.1:8787/api/reader \
-  -H "Content-Type: application/json" \
-  -d '{"url": "<URL_DU_PREMIER_RÉSULTAT>"}'
+curl -s "http://127.0.0.1:8787/api/reader?url=<URL_DU_PREMIER_RÉSULTAT>&markdown=1"
 ```
 
 **Observer :**
 - Qualité du texte extrait (propre ? tronqué ?)
 - Titres bien détectés ?
 - Longueur du contenu
+
+---
+
+## Étape 2b — Persistance article (Articles API)
+
+Tester le CRUD minimal de l'outil :
+
+```bash
+# 1) Liste
+curl -s http://127.0.0.1:8787/api/articles
+
+# 2) Sauvegarde d'un brouillon de test
+curl -s -X PUT http://127.0.0.1:8787/api/articles/qa-managed-agent \
+  -H "Content-Type: application/json" \
+  -d '{
+    "meta": {
+      "metaTitle": "QA Managed Agent",
+      "metaDescription": "Draft QA",
+      "slug": "qa-managed-agent",
+      "slugLocked": true
+    },
+    "brief": {
+      "focusKeyword": "{{desc}}",
+      "longTailKeywords": [],
+      "searchIntent": "informational",
+      "funnelStage": "awareness",
+      "targetAudience": "Test",
+      "destinationUrl": "",
+      "brandVoice": "",
+      "businessGoal": ""
+    },
+    "content": [],
+    "seoScore": null
+  }'
+
+# 3) Lecture
+curl -s http://127.0.0.1:8787/api/articles/qa-managed-agent
+```
+
+**Observer :**
+- PUT retourne `{ ok: true }`
+- GET retourne `meta.slug = qa-managed-agent`
+- `updatedAt` présent
 
 ---
 
@@ -280,6 +393,14 @@ Produis un rapport structuré en français avec ces sections :
 ## ❌ Bugs ou erreurs rencontrés
 - [erreurs API, timeouts, outputs incorrects]
 
+## 🚫 BLOCKER (si arrêt anticipé)
+- Étape :
+- Endpoint :
+- Payload :
+- Réponse brute (extrait) :
+- Cause probable :
+- Action corrective proposée :
+
 ## 🔧 Suggestions d'amélioration (priorité 1-3)
 ### Priorité 1 — Critique
 - ...
@@ -300,4 +421,28 @@ Produis un rapport structuré en français avec ces sections :
 ## 📊 Verdict global
 Score sur 10 : X/10
 Résumé en 3 phrases de l'expérience copywriter.
+```
+
+Ajoute cette section obligatoire à la fin :
+
+```markdown
+## Compliance TOOL-ONLY REWOLF
+- Endpoints REWOLF utilisés (liste exhaustive) :
+- Outils non-REWOLF utilisés : (doit être "aucun")
+- Fallback natif hors outil : (doit être "non")
+```
+
+Ajoute aussi une checklist stricte :
+
+```markdown
+## Checklist couverture endpoints (PASS/FAIL)
+- GET /api/health :
+- POST /api/serp/search :
+- POST /api/serp/competitor-corpus :
+- GET /api/reader :
+- POST /api/ai/stream :
+- POST /api/ai/object :
+- GET /api/articles :
+- PUT /api/articles/:slug :
+- GET /api/articles/:slug :
 ```

@@ -108,6 +108,12 @@ const AGENT_PROFILES = {
 };
 const agentProfile = AGENT_PROFILES[task];
 
+const RUNTIME_ENV_KEYS = [
+  'ANTHROPIC_API_KEY',
+  'OPENAI_API_KEY',
+  'SERPER_API_KEY',
+];
+
 // ---------------------------------------------------------------------------
 // Charger les prompts
 // ---------------------------------------------------------------------------
@@ -133,22 +139,39 @@ function renderTemplate(template, vars) {
   );
 }
 
-const taskPrompt = renderTemplate(taskTemplate, { desc, file, root: ROOT }).trim();
+function parseDotEnv(content) {
+  const out = {};
+  for (const rawLine of content.split('\n')) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const i = line.indexOf('=');
+    if (i <= 0) continue;
+    const key = line.slice(0, i).trim();
+    let value = line.slice(i + 1).trim();
+    value = value.replace(/^['"]|['"]$/g, '');
+    out[key] = value;
+  }
+  return out;
+}
 
-// ---------------------------------------------------------------------------
-// API Key
-// ---------------------------------------------------------------------------
-if (!process.env.ANTHROPIC_API_KEY) {
+function hydrateEnvFromDotEnv() {
   try {
     const envContent = readFileSync(resolve(ROOT, '.env'), 'utf8');
-    const match = envContent.match(/^ANTHROPIC_API_KEY\s*=\s*(.+)$/m);
-    if (match) {
-      process.env.ANTHROPIC_API_KEY = match[1].trim().replace(/^["']|["']$/g, '');
+    const parsed = parseDotEnv(envContent);
+    for (const key of RUNTIME_ENV_KEYS) {
+      if (!process.env[key] && parsed[key]) {
+        process.env[key] = parsed[key];
+      }
     }
   } catch {
     // .env absent, pas grave
   }
 }
+
+// ---------------------------------------------------------------------------
+// API Key
+// ---------------------------------------------------------------------------
+hydrateEnvFromDotEnv();
 
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error('[agent] Erreur : ANTHROPIC_API_KEY introuvable. Définissez-la dans .env ou en variable d\'environnement.');
@@ -156,8 +179,19 @@ if (!process.env.ANTHROPIC_API_KEY) {
 }
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
+const SERPER_API_KEY = process.env.SERPER_API_KEY ?? '';
 const API_BASE = 'https://api.anthropic.com';
 const MODEL = 'claude-sonnet-4-6';
+
+const taskPrompt = renderTemplate(taskTemplate, {
+  desc,
+  file,
+  root: ROOT,
+  anthropic_api_key: ANTHROPIC_API_KEY ?? '',
+  openai_api_key: OPENAI_API_KEY,
+  serper_api_key: SERPER_API_KEY,
+}).trim();
 
 const baseHeaders = {
   'x-api-key': ANTHROPIC_API_KEY,

@@ -14,6 +14,20 @@ Tu dois :
 2. Générer un article concurrent sur le même sujet depuis zéro
 3. Comparer les deux avec un scorecard détaillé
 
+## Règle non négociable : TOOL-ONLY REWOLF
+
+Tu dois utiliser UNIQUEMENT les endpoints REWOLF :
+- `/api/health`
+- `/api/reader`
+- `/api/serp/search`
+- `/api/ai/stream`
+
+Interdits :
+- `web_fetch`, `web_search`, fallback natif, ou génération hors `/api/ai/stream`
+
+Si une clé manque, si un endpoint échoue, ou si le schéma de réponse est invalide :
+➡️ STOP immédiat avec un BLOCKER explicite.
+
 ## Contrainte absolue (très important)
 
 - N'initialise JAMAIS un nouveau projet.
@@ -35,7 +49,29 @@ fi
 cd "$WORKDIR"
 pwd
 ls
+
+# Injecter les clés runtime dans le workspace cloud (si disponibles)
+export ANTHROPIC_API_KEY="{{anthropic_api_key}}"
+export OPENAI_API_KEY="{{openai_api_key}}"
+export SERPER_API_KEY="{{serper_api_key}}"
+
+cat > .env <<'EOF'
+ANTHROPIC_API_KEY={{anthropic_api_key}}
+OPENAI_API_KEY={{openai_api_key}}
+SERPER_API_KEY={{serper_api_key}}
+EOF
+
 npm ci
+
+# Préflight strict : clés obligatoires pour benchmark tool-only
+if [ -z "$SERPER_API_KEY" ]; then
+  echo "BLOCKER: SERPER_API_KEY manquante"
+  exit 42
+fi
+if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$OPENAI_API_KEY" ]; then
+  echo "BLOCKER: ANTHROPIC_API_KEY ou OPENAI_API_KEY manquante"
+  exit 42
+fi
 ```
 
 Si ce bootstrap échoue, ARRÊTE-TOI et renvoie un blocage clair (ne pas scaffold).
