@@ -11,14 +11,16 @@ Le projet intègre **Claude Managed Agents** comme outil de développement (cons
 
 ### Scripts disponibles
 
-| Commande | Usage |
-|----------|-------|
-| `npm run agent:test -- --file <chemin>` | Génère des tests Vitest pour un fichier |
-| `npm run agent:test:fix -- --desc "$(npm test 2>&1)"` | Corrige les tests en échec |
-| `npm run agent:feature -- --desc "description de la feature"` | Implémente une feature |
-| `npm run agent:maintain` | Audit dépendances + qualité code |
-| `npm run agent:qa -- --desc "mot-clé"` | Simule un copywriter A→Z et remonte les frictions |
-| `npm run agent:benchmark -- --desc "<url ou sujet>"` | Benchmark contenu concurrent vs génération |
+
+| Commande                                                      | Usage                                             |
+| ------------------------------------------------------------- | ------------------------------------------------- |
+| `npm run agent:test -- --file <chemin>`                       | Génère des tests Vitest pour un fichier           |
+| `npm run agent:test:fix -- --desc "$(npm test 2>&1)"`         | Corrige les tests en échec                        |
+| `npm run agent:feature -- --desc "description de la feature"` | Implémente une feature                            |
+| `npm run agent:maintain`                                      | Audit dépendances + qualité code                  |
+| `npm run agent:qa -- --desc "mot-clé"`                        | Simule un copywriter A→Z et remonte les frictions |
+| `npm run agent:benchmark -- --desc "<url ou sujet>"`          | Benchmark contenu concurrent vs génération        |
+
 
 ### Exemples
 
@@ -68,6 +70,7 @@ Le flux est aligné sur la doc Anthropic :
 5. `GET /v1/sessions/:id/events/stream`
 
 Notes :
+
 - Le script CLI archive l'agent créé en fin d'exécution (sauf `--keep-agent`).
 - La route serveur `/api/agent/session` réutilise un agent/environment en mémoire.
 - Pour forcer la réutilisation entre redémarrages serveur, vous pouvez définir :
@@ -97,10 +100,12 @@ curl http://localhost:8787/api/agent/session/sess_xxx
 
 Deux workflows dans `.github/workflows/` :
 
-| Workflow | Déclencheur | Action |
-|----------|-------------|--------|
-| `ci.yml` | Push / PR | Lint + Test + Build |
+
+| Workflow             | Déclencheur        | Action                                 |
+| -------------------- | ------------------ | -------------------------------------- |
+| `ci.yml`             | Push / PR          | Lint + Test + Build                    |
 | `agent-test-fix.yml` | CI échoue / manuel | Lance un agent pour corriger les tests |
+
 
 Pour `agent-test-fix.yml`, configurer le secret `ANTHROPIC_API_KEY` dans les settings GitHub Actions du repo.
 
@@ -123,12 +128,14 @@ REWOLF SEO Editor — a French-language SEO article writing tool with workflow *
 
 See `package.json` `scripts` section. Key commands:
 
-| Task | Command |
-|------|---------|
-| Lint | `npm run lint` |
-| Test | `npm test` (Vitest) |
+
+| Task  | Command                                  |
+| ----- | ---------------------------------------- |
+| Lint  | `npm run lint`                           |
+| Test  | `npm test` (Vitest)                      |
 | Build | `npm run build` (`tsc -b && vite build`) |
-| Dev | `npm run dev:all` |
+| Dev   | `npm run dev:all`                        |
+
 
 ### Environment
 
@@ -141,3 +148,4 @@ See `package.json` `scripts` section. Key commands:
 - No Docker, no database, no external services required to run.
 - The Vite dev server sometimes shows an optimizer warning on first load — this is normal and resolves after the initial bundling completes.
 - Articles are saved as JSON to `data/` directory at project root (git-ignored).
+
