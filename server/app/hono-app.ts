@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { handleError, notFoundHandler } from './error-handler';
 
 import { agentRoutes } from '../modules/agent/agent.route';
 import { aiRoutes } from '../modules/ai/ai.route';
@@ -46,6 +47,7 @@ function isDevBrowserOrigin(origin: string): boolean {
 
 export function createApp({ port }: CreateAppOptions): Hono {
   const app = new Hono();
+  app.onError(handleError);
 
   app.get('/', (c) =>
     c.json({
@@ -88,7 +90,7 @@ export function createApp({ port }: CreateAppOptions): Hono {
   app.route('/api/serp', serpRoutes);
   app.route('/api/reader', readerRoutes);
 
-  app.notFound((c) => c.json({ error: 'Not found' }, 404));
+  app.notFound(notFoundHandler);
 
   return app;
 }
