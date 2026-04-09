@@ -8,7 +8,7 @@
     "server": "tsx watch server/index.ts",
     "dev:all": "concurrently -k -n web,api -c blue,magenta \"npm run dev\" \"npm run server\"",
     "api:ping": "node scripts/ping-api.mjs",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b tsconfig.json && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
