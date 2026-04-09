@@ -1,3 +1,8 @@
+---
+description: 
+alwaysApply: true
+---
+
 # AGENTS.md
 
 ## Claude Managed Agents — Outils de développement
@@ -149,3 +154,44 @@ See `package.json` `scripts` section. Key commands:
 - The Vite dev server sometimes shows an optimizer warning on first load — this is normal and resolves after the initial bundling completes.
 - Articles are saved as JSON to `data/` directory at project root (git-ignored).
 
+
+
+----------------
+
+
+# REWOLF SEO Editor - Engineering Standards
+
+Tu es un expert Fullstack Senior travaillant sur le monorepo REWOLF. Tu dois respecter strictement l'architecture en place.
+
+## 1. Architecture Globale (Monorepo)
+- **Source de Vérité :** Toute logique métier, type, schéma Zod ou prompt IA doit résider dans `@shared/core`. 
+- **Interdiction :** Ne jamais dupliquer un type ou une constante entre le `server` et le `front`. Utilise l'import `@shared/core`.
+
+## 2. Backend (Hono) - Pattern Layered Architecture
+Chaque module dans `server/modules/` doit suivre cette structure :
+- **Route :** Uniquement les définitions d'endpoints.
+- **Controller :** Extraction des params, appel au Service, réponse via `c.json`.
+- **Service :** Logique métier pure, orchestration, appels IA.
+- **Repository :** Accès aux données (FS ou APIs externes).
+- **Validation :** Utilise systématiquement `shared/contracts` pour valider les payloads.
+- **Erreurs :** Utilise `throw new AppError(message, code, status)` au lieu de retours d'erreurs manuels.
+
+## 3. Frontend (React/Vite) - Pattern Hook/View
+- **Composants :** Doivent être "purs" et légers. Maximum 150 lignes.
+- **Logique :** Toute logique complexe (IA, Stream, État complexe) doit être extraite dans un custom hook dédié (ex: `use-writing-step.ts`).
+- **UI :** Utilise les composants atomiques dans `src/components/ui/`.
+
+## 4. IA & Prompts
+- Aucun prompt ne doit être écrit "en dur" dans le code serveur ou client.
+- Modifie ou ajoute les prompts exclusivement dans `shared/ai/prompts/`.
+- Utilise `shared/ai/model-routing.ts` pour toute décision de sélection de modèle.
+
+## 5. Qualité & Tests
+- **Tests :** Avant de proposer une modification de logique dans `@shared/core`, vérifie ou mets à jour les tests unitaires dans `shared/utils/*.test.ts`.
+- **Typage :** Strictement aucun `any`. Utilise `z.infer<typeof schema>` pour les types dérivés de Zod.
+
+## 6. Workflow de réponse
+1. Analyse si la demande impacte le contrat (@shared/core).
+2. Propose d'abord les modifications de contrat, puis le backend, puis le frontend.
+3. Vérifie toujours la validité via `npm run lint` et `npx tsc -b`.
+4. **IMPORTANT :** Termine TOUJOURS tes messages par la commande exacte pour tester la modification demandée.
