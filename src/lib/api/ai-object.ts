@@ -1,4 +1,5 @@
 import { apiUrl } from '@/lib/api/base-url';
+import { ApiError } from '@/lib/error-utils';
 import type { AiProvider } from '@/lib/api/stream-ai';
 import type { AiObjectMode as SharedAiObjectMode } from '@shared/core';
 
@@ -17,7 +18,7 @@ export async function aiGenerateObject(
   });
   const data = (await res.json()) as { object?: unknown; error?: string };
   if (!res.ok) {
-    throw new Error(data.error ?? `HTTP ${res.status}`);
+    throw new ApiError(data.error ?? `HTTP ${res.status}`, { status: res.status });
   }
   return data.object;
 }

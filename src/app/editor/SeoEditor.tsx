@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 
 import { LoadArticleDialog } from '@/components/article/load-article-dialog';
 import { HistoryDialog } from '@/components/article/history-dialog';
+import { ErrorBoundary } from '@/components/common/error-boundary';
 import { createEditorKit } from '@/components/editor/editor-kit';
 import { EditorFloatingToolbar } from '@/components/editor/editor-floating-toolbar';
 import { EditorHeadingToolbar } from '@/components/editor/editor-heading-toolbar';
@@ -34,6 +35,7 @@ import {
 } from '@/lib/api/articles-disk';
 import { buildSeoPayload, plainTextFromValue } from '@/lib/seo/extract-structure';
 import { countWords } from '@/lib/knowledge-base/kb-helpers';
+import { notifyApiError } from '@/lib/error-utils';
 import {
   loadStoredArticle,
   saveStoredArticle,
@@ -176,9 +178,7 @@ export function SeoEditor() {
             : 'Enregistre'
         );
       } catch (e) {
-        toast.error(
-          e instanceof Error ? e.message : 'Erreur enregistrement'
-        );
+        notifyApiError(e, 'Erreur enregistrement');
       }
     })();
   }, [editor, meta, brief]);
@@ -341,9 +341,7 @@ export function SeoEditor() {
         setSearchParams({}, { replace: true });
       } catch (e) {
         if (!cancelled) {
-          toast.error(
-            e instanceof Error ? e.message : 'Chargement article impossible'
-          );
+          notifyApiError(e, 'Chargement article impossible');
         }
       }
     })();
@@ -377,30 +375,34 @@ export function SeoEditor() {
       )}
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          <Plate
-            editor={editor}
-            onValueChange={({ value }) => {
-              setDocValue(value);
-              setWordCount(countWords(plainTextFromValue(value as Descendant[])));
-              persistArticle(value);
-            }}
+          <ErrorBoundary
+            title="Le rendu de l’éditeur a échoué"
+            description="Le panneau latéral reste disponible. Vous pouvez réessayer ou recharger la page."
           >
-            <div className="border-border flex flex-wrap items-center gap-2 border-b px-3 py-2">
-              <EditorHeadingToolbar />
-            </div>
-            <EditorContainer
-              variant="select"
-              className="min-h-[min(70vh,560px)] flex-1 rounded-none border-0"
+            <Plate
+              editor={editor}
+              onValueChange={({ value }) => {
+                setDocValue(value);
+                setWordCount(countWords(plainTextFromValue(value as Descendant[])));
+                persistArticle(value);
+              }}
             >
-              <Editor
-                variant="default"
-                placeholder="Choisissez Texte / H1 / H2 / H3 au-dessus, ou tapez / pour le menu…"
-                className="min-h-[min(70vh,560px)]"
-              />
-            </EditorContainer>
-            <EditorFloatingToolbar />
-          </Plate>
-
+              <div className="border-border flex flex-wrap items-center gap-2 border-b px-3 py-2">
+                <EditorHeadingToolbar />
+              </div>
+              <EditorContainer
+                variant="select"
+                className="min-h-[min(70vh,560px)] flex-1 rounded-none border-0"
+              >
+                <Editor
+                  variant="default"
+                  placeholder="Choisissez Texte / H1 / H2 / H3 au-dessus, ou tapez / pour le menu…"
+                  className="min-h-[min(70vh,560px)]"
+                />
+              </EditorContainer>
+              <EditorFloatingToolbar />
+            </Plate>
+          </ErrorBoundary>
           <footer className="border-border bg-muted/30 text-muted-foreground flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-xs">
             <span>
               {wordCount} mot{wordCount > 1 ? 's' : ''}

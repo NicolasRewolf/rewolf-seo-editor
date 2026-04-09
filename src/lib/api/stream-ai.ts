@@ -1,4 +1,5 @@
 import { apiUrl } from '@/lib/api/base-url';
+import { createApiErrorFromResponse } from '@/lib/error-utils';
 import type {
   AiMessage as SharedAiMessage,
   AiProvider as SharedAiProvider,
@@ -48,25 +49,14 @@ export async function streamAiChat(options: StreamAiOptions): Promise<void> {
   });
 
   if (!res.ok) {
-    let msg = `Erreur ${res.status}`;
-    try {
-      const j: unknown = await res.json();
-      if (
-        j &&
-        typeof j === 'object' &&
-        'error' in j &&
-        typeof (j as { error: unknown }).error === 'string'
-      ) {
-        msg = (j as { error: string }).error;
-      }
-    } catch {
-      /* ignore */
-    }
-    if (res.status === 502) {
-      msg +=
-        ' — Vérifiez que l’API tourne (`npm run server` sur le port 8787). En dev les appels vont en direct vers 127.0.0.1:8787.';
-    }
-    throw new Error(msg);
+    const extra =
+      res.status === 502
+        ? 'Vérifiez que l’API tourne (`npm run server` sur le port 8787). En dev les appels vont en direct vers 127.0.0.1:8787.'
+        : undefined;
+    throw await createApiErrorFromResponse(
+      res,
+      extra ? `Erreur ${res.status} — ${extra}` : `Erreur ${res.status}`
+    );
   }
 
   const reader = res.body?.getReader();

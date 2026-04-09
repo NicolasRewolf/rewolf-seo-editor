@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toast } from 'sonner';
 
+import { notifyApiError } from '@/lib/error-utils';
 import {
   streamAiChatWithFallback,
   type AiMessage,
@@ -84,7 +85,8 @@ export function useAiAssistant() {
         opts?.onComplete?.(accumulated);
       } catch (e) {
         if (e instanceof Error && e.name === 'AbortError') return;
-        setError(e instanceof Error ? e.message : 'Erreur inconnue');
+        const message = notifyApiError(e, 'Erreur IA');
+        setError(message);
       } finally {
         setLoading(false);
         abortRef.current = null;

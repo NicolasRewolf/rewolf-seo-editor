@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 
 import { streamAiChatWithFallback } from '@/lib/api/stream-ai';
 import { buildArticleContextWithKb } from '@/lib/ai/article-context';
+import { notifyApiError } from '@/lib/error-utils';
 import { kbExcerptForHeading } from '@/lib/knowledge-base/kb-text';
 import {
   collectH2Paths,
@@ -443,7 +444,7 @@ export function useWritingStep(params: UseWritingStepParams) {
         }
       } catch (e) {
         if (e instanceof Error && e.name === 'AbortError') return;
-        toast.error(e instanceof Error ? e.message : 'Erreur génération section');
+        notifyApiError(e, 'Erreur génération section');
       } finally {
         setSectionLoading(false);
         sectionAbortRef.current = null;
