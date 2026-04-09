@@ -4,8 +4,8 @@ import { cors } from 'hono/cors';
 import { agentRoutes } from '../routes/agent';
 import { aiRoutes } from '../modules/ai/ai.route';
 import { articlesRoutes } from '../modules/articles/articles.route';
-import { readerRoutes } from '../routes/reader';
-import { serpRoutes } from '../routes/serp';
+import { readerRoutes } from '../modules/reader/reader.route';
+import { serpRoutes } from '../modules/serp/serp.route';
 
 type CreateAppOptions = {
   port: number;
