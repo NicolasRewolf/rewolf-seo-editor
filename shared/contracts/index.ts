@@ -1,2 +1,1 @@
-// Shared contracts namespace (stubs only for now).
-export {};
+export * from './article.contract';
