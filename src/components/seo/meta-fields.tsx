@@ -10,7 +10,7 @@ import {
   measureTitleWidthPx,
   SERP_LIMITS,
 } from '@/lib/seo/canvas-measure';
-import { slugify } from '@/lib/utils/slugify';
+import { slugify } from '@shared/core';
 import type { ArticleMeta } from '@/types/article';
 
 import { SerpPreview } from './serp-preview';

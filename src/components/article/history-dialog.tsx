@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { formatDateTimeFr } from '@shared/core';
 
 import {
   Dialog,
@@ -83,7 +84,7 @@ export function HistoryDialog({ slug, onRestore }: HistoryDialogProps) {
             >
               <div className="mb-1 flex items-center justify-between gap-2">
                 <span className="text-foreground font-medium">
-                  {new Date(snapshot.createdAt).toLocaleString()} · {snapshot.kind}
+                  {formatDateTimeFr(snapshot.createdAt)} · {snapshot.kind}
                 </span>
                 <button
                   type="button"

@@ -1,5 +1,8 @@
 import { extractHeadingsFromMarkdown } from '@/lib/knowledge-base/extract-headings';
 import type { KbSource } from '@/types/knowledge-base';
+import { countWords, nowIso } from '@shared/core';
+
+export { countWords };
 
 /** Clé stable pour détecter si une URL est déjà en base (http→https, slash final, casse). */
 export function normalizeSourceUrl(raw: string): string {
@@ -29,12 +32,6 @@ export function normalizedSourceUrlsFromSources(sources: KbSource[]): Set<string
   return set;
 }
 
-export function countWords(text: string): number {
-  const t = text.trim();
-  if (!t) return 0;
-  return t.split(/\s+/).filter(Boolean).length;
-}
-
 export function makeSource(
   partial: Omit<KbSource, 'id' | 'wordCount' | 'addedAt'>
 ): KbSource {
@@ -43,7 +40,7 @@ export function makeSource(
     id: crypto.randomUUID(),
     ...partial,
     wordCount: countWords(content),
-    addedAt: new Date().toISOString(),
+    addedAt: nowIso(),
   };
 }
 

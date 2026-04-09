@@ -2,6 +2,7 @@
 
 import { ChevronDownIcon, ChevronRightIcon, XIcon } from 'lucide-react';
 import { useState, type Dispatch, type SetStateAction } from 'react';
+import { formatDateTimeFrShort } from '@shared/core';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -70,10 +71,7 @@ export function SourceList({ knowledgeBase, onChange }: SourceListProps) {
                       </span>
                       <span>{s.wordCount} mots</span>
                       <span>
-                        {new Date(s.addedAt).toLocaleString('fr-FR', {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        })}
+                        {formatDateTimeFrShort(s.addedAt)}
                       </span>
                     </div>
                   </div>

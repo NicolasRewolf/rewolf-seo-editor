@@ -1,7 +1,8 @@
 import { apiUrl } from '@/lib/api/base-url';
 import type { AiProvider } from '@/lib/api/stream-ai';
+import type { AiObjectMode as SharedAiObjectMode } from '@shared/core';
 
-export type AiObjectMode = 'meta-scored' | 'jsonld-blog' | 'jsonld-bundle';
+export type AiObjectMode = SharedAiObjectMode;
 
 export async function aiGenerateObject(
   mode: AiObjectMode,

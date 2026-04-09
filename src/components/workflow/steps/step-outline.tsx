@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { OutlineGenerator } from '@/components/workflow/outline/outline-generator';
 import { OutlinePreview } from '@/components/workflow/outline/outline-preview';
 import { useAiAssistant } from '@/hooks/useAiAssistant';
-import { SEO_OUTLINE_FROM_KB_PROMPT } from '@/lib/ai/prompts/workflow';
+import { SEO_OUTLINE_FROM_KB_PROMPT } from '@shared/core';
 import { concatKbSources, formatCompetitorHeadings } from '@/lib/knowledge-base/kb-text';
 import {
   collectCompetitorH2FromKb,

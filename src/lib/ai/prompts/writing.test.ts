@@ -5,7 +5,7 @@ import {
   SEO_FAQ_PROMPT,
   SEO_HEADLINE_VARIANTS_PROMPT,
   SEO_INTRO_PROMPT,
-} from '@/lib/ai/prompts/writing';
+} from '@shared/core';
 
 describe('writing prompts', () => {
   it('FAQ prompt contains expected SEO constraints', () => {

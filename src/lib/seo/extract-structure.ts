@@ -1,6 +1,7 @@
 import type { Descendant } from 'platejs';
 import { KEYS } from 'platejs';
 import { Element, Node, Text } from 'slate';
+import { countWords } from '@shared/core';
 
 import { measureMetaDescriptionWidthPx, measureTitleWidthPx } from '@/lib/seo/canvas-measure';
 import type { ArticleMeta } from '@/types/article';
@@ -14,12 +15,6 @@ function isHeadingType(t: string): boolean {
 
 function headingLevel(t: string): number {
   return Number(t[1]) || 0;
-}
-
-function countWords(s: string): number {
-  const t = s.trim();
-  if (!t) return 0;
-  return t.split(/\s+/).filter(Boolean).length;
 }
 
 function isInternalUrl(url: string, siteHost: string): boolean {

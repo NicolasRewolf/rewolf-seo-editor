@@ -1,5 +1,6 @@
 import type { SeoAnalysisPayload, SeoCriterion, SeoDimensionResult } from '@/types/seo';
 import { stemFr } from '@/lib/seo/stem-fr';
+import { countWords, keywordDensityPercent } from '@shared/core';
 
 export function norm(s: string): string {
   return s
@@ -72,13 +73,6 @@ export function countPhraseInTextStemmed(plain: string, kw: string): number {
   return matches;
 }
 
-function keywordDensityPercentFixed(plainText: string, kw: string): number {
-  const wc = plainText.trim().split(/\s+/).filter(Boolean).length;
-  if (!wc || !kw.trim()) return 0;
-  const hits = countPhraseInTextStemmed(plainText, kw);
-  return (hits / wc) * 100;
-}
-
 export function analyzeOnPage(p: SeoAnalysisPayload): SeoDimensionResult {
   const kw = p.focusKeyword;
   const criteria: SeoCriterion[] = [];
@@ -136,7 +130,10 @@ export function analyzeOnPage(p: SeoAnalysisPayload): SeoDimensionResult {
       : "Définissez un slug d'URL.",
   });
 
-  const density = keywordDensityPercentFixed(p.plainText, kw);
+  const hits = countPhraseInTextStemmed(p.plainText, kw);
+  const density = kw.trim()
+    ? keywordDensityPercent(p.plainText, hits)
+    : 0;
   const densityOk = density >= 0.5 && density <= 0.8;
   const densityWarn = density > 0 && density < 0.5;
   criteria.push({
@@ -147,14 +144,14 @@ export function analyzeOnPage(p: SeoAnalysisPayload): SeoDimensionResult {
         ? 'warn'
         : densityOk
           ? 'ok'
-          : density > 0.8
+        : density > 0.8
             ? 'bad'
             : densityWarn
               ? 'warn'
               : 'bad'
       : 'warn',
     detail: kw
-      ? `Environ ${density.toFixed(2)} % (${p.wordCount} mots).`
+      ? `Environ ${density.toFixed(2)} % (${countWords(p.plainText)} mots).`
       : "Sans mot-clé, la densité n'est pas calculée.",
   });
 

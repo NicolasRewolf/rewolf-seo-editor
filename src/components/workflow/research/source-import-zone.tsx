@@ -2,6 +2,7 @@
 
 import { FileUpIcon, LinkIcon, PlusIcon } from 'lucide-react';
 import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { countWords, nowIso } from '@shared/core';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,12 +12,6 @@ import { fetchReaderContent } from '@/lib/api/reader-fetch';
 import type { KbSource, KnowledgeBase } from '@/types/knowledge-base';
 import { toast } from 'sonner';
 
-function countWords(text: string): number {
-  const t = text.trim();
-  if (!t) return 0;
-  return t.split(/\s+/).filter(Boolean).length;
-}
-
 function makeSource(
   partial: Omit<KbSource, 'id' | 'wordCount' | 'addedAt'>
 ): KbSource {
@@ -25,7 +20,7 @@ function makeSource(
     id: crypto.randomUUID(),
     ...partial,
     wordCount: countWords(content),
-    addedAt: new Date().toISOString(),
+    addedAt: nowIso(),
   };
 }
 
