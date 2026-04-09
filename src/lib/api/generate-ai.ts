@@ -1,28 +1,16 @@
 import { apiUrl } from '@/lib/api/base-url';
 import type { AiMessage, AiProvider, AiTaskGroup } from '@/lib/api/stream-ai';
 
-export type GenerateAiOptions = {
-  provider: AiProvider;
+export async function generateAiText(options: {
+  provider?: AiProvider;
   taskGroup?: AiTaskGroup;
   model?: string;
   messages: AiMessage[];
-  signal?: AbortSignal;
-};
-
-/**
- * Génère du texte via POST /api/ai/stream et retourne le texte complet accumulé.
- * Contrairement à streamAiChat, cette fonction attend la fin du stream avant de retourner.
- */
-export async function generateAiText(
-  options: GenerateAiOptions
-): Promise<{ text: string }> {
-  const { provider, taskGroup, model, messages, signal } = options;
-
-  const res = await fetch(apiUrl('/api/ai/stream'), {
+}): Promise<{ text: string }> {
+  const res = await fetch(apiUrl('/api/ai/generate'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ provider, taskGroup, model, messages }),
-    signal,
+    body: JSON.stringify(options),
   });
 
   if (!res.ok) {
@@ -38,25 +26,14 @@ export async function generateAiText(
         msg = (j as { error: string }).error;
       }
     } catch {
-      /* ignore */
+      // ignore parse errors and keep status-based message
     }
     throw new Error(msg);
   }
 
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error('Réponse vide');
-
-  const decoder = new TextDecoder();
-  let text = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value?.byteLength) {
-      text += decoder.decode(value, { stream: true });
-    }
+  const data = (await res.json()) as { text?: string };
+  if (typeof data.text !== 'string') {
+    throw new Error('Réponse IA invalide (texte manquant)');
   }
-  text += decoder.decode();
-
-  if (!text) throw new Error('Réponse vide du modèle');
-  return { text };
+  return { text: data.text };
 }
