@@ -1,2 +1,4 @@
-// Shared AI prompts namespace (stubs only for now).
-export {};
+export * from './writing.prompt';
+export * from './workflow.prompt';
+export * from './meta.prompt';
+export * from './jsonld.prompt';
