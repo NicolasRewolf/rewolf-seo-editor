@@ -4,6 +4,20 @@
 **Focus spécifique :** {{desc}}
 {{/if}}
 
+## Contrainte absolue (très important)
+
+- N'initialise JAMAIS un nouveau projet.
+- N'écris pas de scaffold React/Vite depuis zéro.
+- Travaille UNIQUEMENT sur le repo existant à ce chemin :
+
+```bash
+cd {{root}}
+pwd
+ls
+```
+
+- Si le dossier n'existe pas ou n'est pas un repo Git, ARRÊTE-TOI et renvoie un blocage clair au lieu de scaffold.
+
 ## Ce que tu dois faire
 
 Effectue un audit de maintenance complet du projet REWOLF SEO Editor. Vérifie les points suivants dans l'ordre :
@@ -11,7 +25,7 @@ Effectue un audit de maintenance complet du projet REWOLF SEO Editor. Vérifie l
 ### 1. Dépendances
 
 ```bash
-cd /home/user/rewolf-seo-editor
+cd {{root}}
 npm outdated
 ```
 

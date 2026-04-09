@@ -14,6 +14,21 @@ Tu dois :
 2. Générer un article concurrent sur le même sujet depuis zéro
 3. Comparer les deux avec un scorecard détaillé
 
+## Contrainte absolue (très important)
+
+- N'initialise JAMAIS un nouveau projet.
+- N'écris pas de scaffold React/Vite depuis zéro.
+- Travaille UNIQUEMENT sur le repo existant à ce chemin :
+
+```bash
+cd {{root}}
+pwd
+ls
+```
+
+- Si le dossier n'existe pas ou n'est pas un repo Git, ARRÊTE-TOI et renvoie un blocage clair.
+- Si `127.0.0.1:8787` est inaccessible depuis ton environnement, ARRÊTE-TOI et renvoie un blocage clair (ne pas improviser de scaffold).
+
 ---
 
 ## Étape 1 — Récupérer et analyser l'article de référence

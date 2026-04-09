@@ -19,6 +19,21 @@ frotte, ce qui manque, ce qui est lent ou confus, et produire un rapport structu
 **Tu n'as pas accès à l'UI**. Tu travailles directement via l'API Hono (port 8787)
 et le code source. C'est intentionnel : tu testes la robustesse du moteur, pas l'interface.
 
+## Contrainte absolue (très important)
+
+- N'initialise JAMAIS un nouveau projet.
+- N'écris pas de scaffold React/Vite depuis zéro.
+- Travaille UNIQUEMENT sur le repo existant à ce chemin :
+
+```bash
+cd {{root}}
+pwd
+ls
+```
+
+- Si le dossier n'existe pas ou n'est pas un repo Git, ARRÊTE-TOI et renvoie un blocage clair.
+- Si `127.0.0.1:8787` est inaccessible depuis ton environnement, ARRÊTE-TOI et renvoie un blocage clair (ne pas improviser de scaffold).
+
 ---
 
 ## Étape 0 — Vérification de l'environnement
