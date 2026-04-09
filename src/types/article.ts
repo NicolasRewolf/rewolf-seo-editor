@@ -1,35 +1,25 @@
 import type { InternalLinksMap } from '@/types/internal-links';
 import type { KnowledgeBase } from '@/types/knowledge-base';
+import type {
+  ArticleBrief as SharedArticleBrief,
+  ArticleMeta as SharedArticleMeta,
+  CompetitorSnapshot as SharedCompetitorSnapshot,
+  FunnelStage as SharedFunnelStage,
+  LegacyArticleMeta as SharedLegacyArticleMeta,
+  SearchIntent as SharedSearchIntent,
+  StoredArticleEnvelope as SharedStoredArticleEnvelope,
+} from '../../shared/contracts';
 
 /** Intention de recherche (brief stratégique). */
-export type SearchIntent =
-  | 'informational'
-  | 'transactional'
-  | 'navigational'
-  | 'commercial';
+export type SearchIntent = SharedSearchIntent;
 
 /** Phase funnel (brief). */
-export type FunnelStage = 'awareness' | 'consideration' | 'decision';
+export type FunnelStage = SharedFunnelStage;
 
 /** Brief éditorial — mot-clé et cibles ; saisi avant le plan. */
-export type ArticleBrief = {
-  focusKeyword: string;
-  longTailKeywords: string[];
-  searchIntent: SearchIntent | null;
-  funnelStage: FunnelStage | null;
-  targetAudience: string;
-  destinationUrl: string;
-  brandVoice: string;
-  businessGoal: string;
-};
+export type ArticleBrief = SharedArticleBrief;
 
-export type ArticleMeta = {
-  metaTitle: string;
-  metaDescription: string;
-  slug: string;
-  /** Si false, le slug est régénéré depuis le title tag */
-  slugLocked: boolean;
-};
+export type ArticleMeta = SharedArticleMeta;
 
 export function defaultArticleBrief(): ArticleBrief {
   return {
@@ -45,7 +35,7 @@ export function defaultArticleBrief(): ArticleBrief {
 }
 
 /** Type legacy pour migration depuis localStorage / JSON disque. */
-export type LegacyArticleMeta = ArticleMeta & { focusKeyword?: string };
+export type LegacyArticleMeta = SharedLegacyArticleMeta;
 
 /**
  * Migre un meta chargé depuis l’ancien format (focusKeyword dans meta).
@@ -66,27 +56,12 @@ export function splitLegacyMeta(raw: LegacyArticleMeta): {
   };
 }
 
-export type StoredArticleEnvelope = {
-  id: string;
-  meta: ArticleMeta;
-  brief?: ArticleBrief;
-  content: unknown; // Plate JSON (Value)
-  seoScore: number | null;
-  competitorData: CompetitorSnapshot | null;
-  createdAt: string; // ISO 8601
-  updatedAt: string; // ISO 8601
+export type CompetitorSnapshot = SharedCompetitorSnapshot;
+
+export type StoredArticleEnvelope = Omit<
+  SharedStoredArticleEnvelope,
+  'knowledgeBase' | 'internalLinks'
+> & {
   knowledgeBase?: KnowledgeBase;
   internalLinks?: InternalLinksMap;
-};
-
-export type CompetitorSnapshot = {
-  keyword: string;
-  fetchedAt: string; // ISO 8601
-  avgWordCount: number;
-  results: Array<{
-    url: string;
-    title: string;
-    wordCount: number;
-    keywordDensity: number;
-  }>;
 };

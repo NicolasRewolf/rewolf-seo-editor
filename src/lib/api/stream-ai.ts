@@ -1,4 +1,9 @@
 import { apiUrl } from '@/lib/api/base-url';
+import type {
+  AiMessage as SharedAiMessage,
+  AiProvider as SharedAiProvider,
+  AiTaskGroup as SharedAiTaskGroup,
+} from '../../../shared/contracts';
 
 /** Flux HTTP 200 mais aucun octet (ex. erreur Anthropic non exposée en JSON). */
 export class AiStreamEmptyError extends Error {
@@ -10,18 +15,14 @@ export class AiStreamEmptyError extends Error {
   }
 }
 
-export type AiProvider = 'anthropic' | 'openai';
-
-export type AiMessage = {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-};
+export type AiProvider = SharedAiProvider;
+export type AiMessage = SharedAiMessage;
 
 /**
  * Routage serveur : `fast` → gpt-4.1-mini ; `quality` → Claude Sonnet (ignore le
  * choix utilisateur). Sans `taskGroup`, le serveur suit `provider` (Sonnet vs mini).
  */
-export type AiTaskGroup = 'fast' | 'quality';
+export type AiTaskGroup = SharedAiTaskGroup;
 
 export type StreamAiOptions = {
   provider: AiProvider;
