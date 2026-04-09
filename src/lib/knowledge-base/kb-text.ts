@@ -220,6 +220,19 @@ export const KB_FRENCH_STOPWORDS = new Set([
   't',
 ]);
 
+/**
+ * Sélectionne les chunks de la KB les plus pertinents pour un mot-clé donné.
+ * Utilisé par les prompts d'extraction longue traîne.
+ */
+export function selectChunksForPrompt(
+  kb: KnowledgeBase,
+  focusKeyword: string,
+  maxChars: number
+): { text: string } {
+  const text = kbExcerptForHeading(kb, focusKeyword, maxChars);
+  return { text };
+}
+
 /** Extrait orienté vers une section H2 (mots > 3 lettres, hors stopwords). */
 export function kbExcerptForHeading(
   kb: KnowledgeBase,

@@ -47,6 +47,31 @@ RÈGLES :
 - Si les sources ne couvrent pas un sous-point, indique [COMPLÉTER AVEC DONNÉES PROPRES]
 - Markdown uniquement, commence directement par le contenu (pas de méta-commentaire)`;
 
+export const LONGTAIL_EXTRACTION_PROMPT = `Tu es un expert en recherche de mots-clés SEO longue traîne.
+Tu reçois des extraits de sources et un mot-clé principal.
+
+OBJECTIF : Identifier les requêtes longue traîne pertinentes à cibler dans l'article.
+
+RÈGLES :
+- Retourne UNIQUEMENT un objet JSON valide, sans markdown, sans commentaire
+- 10 à 25 suggestions selon la richesse des sources
+- Chaque suggestion doit être une vraie requête que quelqu'un taperait dans Google
+- Inclure des variantes de l'intention : informational, transactional, commercial, navigational
+- Évalue la difficulté (low / med / high) selon la concurrence probable
+- L'angle décrit comment l'article peut se démarquer sur cette requête
+
+FORMAT JSON attendu :
+{
+  "keywords": [
+    {
+      "query": "requête longue traîne exacte",
+      "intent": "informational",
+      "difficulty": "low",
+      "angle": "angle différenciant pour couvrir cette requête"
+    }
+  ]
+}`;
+
 export const SEO_INTERNAL_LINKS_PROMPT = `Tu es un expert en maillage interne SEO. Tu reçois le contenu Markdown d'un article et une liste de liens internes disponibles (URL + ancre + titre).
 
 OBJECTIF : Suggérer des insertions de liens internes naturelles et pertinentes.
