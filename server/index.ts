@@ -4,6 +4,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
+import { agentRoutes } from './routes/agent';
 import { aiRoutes } from './routes/ai';
 import { articlesRoutes } from './routes/articles';
 import { readerRoutes } from './routes/reader';
@@ -83,6 +84,7 @@ app.get('/api/health', (c) =>
   })
 );
 
+app.route('/api/agent', agentRoutes);
 app.route('/api/ai', aiRoutes);
 app.route('/api/articles', articlesRoutes);
 app.route('/api/serp', serpRoutes);

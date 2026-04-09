@@ -1,0 +1,87 @@
+name: Agent — Correction automatique des tests
+
+on:
+  # Se déclenche manuellement ou après un échec du workflow CI
+  workflow_dispatch:
+    inputs:
+      test_output:
+        description: "Output de npm run test (optionnel — sera relancé si vide)"
+        required: false
+        default: ""
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  fix-tests:
+    name: Corriger les tests en échec
+    runs-on: ubuntu-latest
+    # Ne s'exécute que si le CI a échoué (via workflow_run) ou en déclenchement manuel
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure')
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Récupère la branche de la PR concernée si disponible
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Capturer l'output des tests
+        id: tests
+        run: |
+          set +e
+          TEST_OUTPUT=$(npm run test 2>&1)
+          TEST_EXIT=$?
+          set -e
+          echo "exit_code=$TEST_EXIT" >> "$GITHUB_OUTPUT"
+          # Sauvegarder l'output pour l'agent
+          echo "$TEST_OUTPUT" > /tmp/test-output.txt
+          echo "--- Output ---"
+          echo "$TEST_OUTPUT"
+
+      - name: Lancer l'agent de correction si des tests échouent
+        if: steps.tests.outputs.exit_code != '0'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          TEST_OUTPUT=$(cat /tmp/test-output.txt)
+          node scripts/agents/run-agent.mjs \
+            --task test-fix \
+            --desc "$TEST_OUTPUT"
+
+      - name: Re-valider après correction
+        if: steps.tests.outputs.exit_code != '0'
+        run: |
+          npm run lint
+          npm run test
+          npm run build
+
+      - name: Commit et push les corrections
+        if: steps.tests.outputs.exit_code != '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet || (
+            git add -A &&
+            git commit -m "fix(tests): correction automatique par agent Managed Agents" &&
+            git push
+          )
+
+      - name: Rapport de succès
+        if: steps.tests.outputs.exit_code == '0'
+        run: echo "Tous les tests passent — aucune correction nécessaire."
