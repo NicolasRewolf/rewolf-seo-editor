@@ -201,20 +201,29 @@ async function streamSession(sessionId) {
 // ---------------------------------------------------------------------------
 console.log(`[agent] Tâche : ${task}${file ? ` | fichier : ${file}` : ''}`);
 console.log(`[agent] Modèle : ${MODEL}`);
-console.log('[agent] Création de la session…');
+console.log('[agent] Démarrage…');
 
 try {
-  // 1. Créer la session (agent inline — pas besoin de pré-créer un agent)
-  const session = await apiPost('/v1/sessions', {
+  // 1. Créer l'agent (modèle + prompt système)
+  console.log('[agent] Création de l\'agent…');
+  const agent = await apiPost('/v1/agents', {
     model: MODEL,
-    system: systemPrompt,
+    system_prompt: systemPrompt,
+    name: `rewolf-${task}`,
+  });
+  const agentId = agent.id;
+  console.log(`[agent] Agent : ${agentId}`);
+
+  // 2. Créer la session liée à l'agent
+  const session = await apiPost('/v1/sessions', {
+    agent_id: agentId,
   });
 
   const sessionId = session.id;
   console.log(`[agent] Session : ${sessionId}`);
   console.log('[agent] Envoi de la tâche…');
 
-  // 2. Envoyer l'événement utilisateur
+  // 3. Envoyer l'événement utilisateur
   await apiPost(`/v1/sessions/${sessionId}/events`, {
     type: 'user',
     content: taskPrompt,
@@ -222,7 +231,7 @@ try {
 
   console.log('[agent] Exécution en cours…');
 
-  // 3. Streamer les résultats
+  // 4. Streamer les résultats
   await streamSession(sessionId);
 
   console.log('\n[agent] Terminé.');
