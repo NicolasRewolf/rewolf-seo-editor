@@ -3,7 +3,7 @@ import { cors } from 'hono/cors';
 
 import { agentRoutes } from '../routes/agent';
 import { aiRoutes } from '../routes/ai';
-import { articlesRoutes } from '../routes/articles';
+import { articlesRoutes } from '../modules/articles/articles.route';
 import { readerRoutes } from '../routes/reader';
 import { serpRoutes } from '../routes/serp';
 
