@@ -4,7 +4,7 @@ import { InternalLinksImport } from '@/components/workflow/enrich/internal-links
 import { InternalLinksSuggest } from '@/components/workflow/enrich/internal-links-suggest';
 import { useAiAssistant } from '@/hooks/useAiAssistant';
 import { buildArticleContextBlock } from '@/lib/ai/article-context';
-import { SEO_INTERNAL_LINKS_PROMPT } from '../../../../shared/ai/prompts/workflow.prompt';
+import { SEO_INTERNAL_LINKS_PROMPT } from '@shared/core';
 import type { ArticleBrief, ArticleMeta } from '@/types/article';
 import type { InternalLinksMap } from '@/types/internal-links';
 import { useCallback } from 'react';

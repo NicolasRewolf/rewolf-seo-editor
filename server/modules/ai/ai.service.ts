@@ -4,13 +4,13 @@ import {
   resolveCommandRouting,
   resolveObjectModelRouting,
   resolveStreamRouting,
-} from '../../../shared/ai';
+} from '@shared/core';
 import {
   SEO_EDITOR_PROMPT,
   SEO_JSONLD_BUNDLE_PROMPT,
   SEO_JSONLD_PROMPT,
   SEO_META_PROMPT,
-} from '../../../shared/ai';
+} from '@shared/core';
 import {
   aiJsonLdBlogSchema,
   aiJsonLdBundleSchema,
@@ -18,7 +18,7 @@ import {
   type AiProvider,
   type AiStreamBody,
   type AiTaskGroup,
-} from '../../../shared/contracts';
+} from '@shared/core';
 import { generateObjectWithProvider, streamWithProvider } from './ai.repository';
 
 /** Garde-fou : évite requêtes trop massives (502 gateway, erreurs fournisseur). */

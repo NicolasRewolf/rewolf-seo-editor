@@ -1,4 +1,4 @@
-import { type ArticleBody } from '../../../shared/contracts';
+import { type ArticleBody } from '@shared/core';
 import {
   buildStoredArticlePayload,
   fileNamesToSortedSlugs,

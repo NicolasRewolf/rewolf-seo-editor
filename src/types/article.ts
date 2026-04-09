@@ -8,7 +8,7 @@ import type {
   LegacyArticleMeta as SharedLegacyArticleMeta,
   SearchIntent as SharedSearchIntent,
   StoredArticleEnvelope as SharedStoredArticleEnvelope,
-} from '../../shared/contracts';
+} from '@shared/core';
 
 /** Intention de recherche (brief stratégique). */
 export type SearchIntent = SharedSearchIntent;

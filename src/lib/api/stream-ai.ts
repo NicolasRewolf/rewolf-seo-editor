@@ -3,7 +3,7 @@ import type {
   AiMessage as SharedAiMessage,
   AiProvider as SharedAiProvider,
   AiTaskGroup as SharedAiTaskGroup,
-} from '../../../shared/contracts';
+} from '@shared/core';
 
 /** Flux HTTP 200 mais aucun octet (ex. erreur Anthropic non exposée en JSON). */
 export class AiStreamEmptyError extends Error {

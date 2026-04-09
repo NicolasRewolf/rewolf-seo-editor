@@ -8,5 +8,5 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "files": []
+  "include": ["shared"]
 }

@@ -12,13 +12,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAiAssistant } from '@/hooks/useAiAssistant';
 import { streamAiChatWithFallback } from '@/lib/api/stream-ai';
 import { buildArticleContextWithKb } from '@/lib/ai/article-context';
-import { SEO_SECTION_FROM_KB_PROMPT } from '../../../../shared/ai/prompts/workflow.prompt';
+import { SEO_SECTION_FROM_KB_PROMPT } from '@shared/core';
 import {
   SEO_ALT_TEXT_PROMPT,
   SEO_FAQ_PROMPT,
   SEO_HEADLINE_VARIANTS_PROMPT,
   SEO_INTRO_PROMPT,
-} from '../../../../shared/ai/prompts/writing.prompt';
+} from '@shared/core';
 import { kbExcerptForHeading } from '@/lib/knowledge-base/kb-text';
 import {
   collectH2Paths,

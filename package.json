@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": ["shared"],
   "scripts": {
     "dev": "vite",
     "server": "tsx watch server/index.ts",
@@ -20,6 +21,7 @@
     "agent:benchmark": "node scripts/agents/run-agent.mjs --task benchmark"
   },
   "dependencies": {
+    "@shared/core": "workspace:*",
     "@ai-sdk/anthropic": "^3.0.66",
     "@ai-sdk/openai": "^3.0.50",
     "@ai-sdk/react": "^3.0.148",

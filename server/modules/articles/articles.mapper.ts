@@ -2,7 +2,7 @@ import {
   articleBodySchema,
   articleSlugRegex,
   type ArticleBody,
-} from '../../../shared/contracts';
+} from '@shared/core';
 
 export function isValidSlug(slug: string): boolean {
   return articleSlugRegex.test(slug);

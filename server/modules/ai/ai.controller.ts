@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
 
-import { aiObjectModeSchema, aiStreamBodySchema, type AiProvider } from '../../../shared/contracts';
+import { aiObjectModeSchema, aiStreamBodySchema, type AiProvider } from '@shared/core';
 import { runCommandStream, runObjectGeneration, runTextStream } from './ai.service';
 
 function getAiKeys() {

@@ -1,6 +1,6 @@
 import { apiUrl } from '@/lib/api/base-url';
 import type { AiProvider } from '@/lib/api/stream-ai';
-import type { AiObjectMode as SharedAiObjectMode } from '../../../shared/contracts';
+import type { AiObjectMode as SharedAiObjectMode } from '@shared/core';
 
 export type AiObjectMode = SharedAiObjectMode;
 

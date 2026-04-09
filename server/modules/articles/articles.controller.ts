@@ -1,5 +1,5 @@
 import type { Context } from 'hono';
-import { articleBodySchema, type ArticleBody } from '../../../shared/contracts';
+import { articleBodySchema, type ArticleBody } from '@shared/core';
 import { AppError } from '../../lib/errors';
 import {
   getArticleBySlug,
