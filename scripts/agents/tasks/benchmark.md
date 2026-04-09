@@ -18,16 +18,27 @@ Tu dois :
 
 - N'initialise JAMAIS un nouveau projet.
 - N'écris pas de scaffold React/Vite depuis zéro.
-- Travaille UNIQUEMENT sur le repo existant à ce chemin :
+- Utilise UNIQUEMENT le repo officiel :
+  `https://github.com/NicolasRewolf/rewolf-seo-editor.git`
+
+## Bootstrap workspace (Managed Agents cloud)
 
 ```bash
-cd {{root}}
+set -e
+REPO_URL="https://github.com/NicolasRewolf/rewolf-seo-editor.git"
+WORKDIR="/home/user/rewolf-seo-editor"
+
+if [ ! -d "$WORKDIR/.git" ]; then
+  git clone "$REPO_URL" "$WORKDIR"
+fi
+
+cd "$WORKDIR"
 pwd
 ls
+npm ci
 ```
 
-- Si le dossier n'existe pas ou n'est pas un repo Git, ARRÊTE-TOI et renvoie un blocage clair.
-- Si `127.0.0.1:8787` est inaccessible depuis ton environnement, ARRÊTE-TOI et renvoie un blocage clair (ne pas improviser de scaffold).
+Si ce bootstrap échoue, ARRÊTE-TOI et renvoie un blocage clair (ne pas scaffold).
 
 ---
 

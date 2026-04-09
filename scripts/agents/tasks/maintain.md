@@ -8,15 +8,27 @@
 
 - N'initialise JAMAIS un nouveau projet.
 - N'écris pas de scaffold React/Vite depuis zéro.
-- Travaille UNIQUEMENT sur le repo existant à ce chemin :
+- Utilise UNIQUEMENT le repo officiel :
+  `https://github.com/NicolasRewolf/rewolf-seo-editor.git`
+
+## Bootstrap workspace (Managed Agents cloud)
 
 ```bash
-cd {{root}}
+set -e
+REPO_URL="https://github.com/NicolasRewolf/rewolf-seo-editor.git"
+WORKDIR="/home/user/rewolf-seo-editor"
+
+if [ ! -d "$WORKDIR/.git" ]; then
+  git clone "$REPO_URL" "$WORKDIR"
+fi
+
+cd "$WORKDIR"
 pwd
 ls
+npm ci
 ```
 
-- Si le dossier n'existe pas ou n'est pas un repo Git, ARRÊTE-TOI et renvoie un blocage clair au lieu de scaffold.
+Si ce bootstrap échoue, ARRÊTE-TOI et renvoie un blocage clair (ne pas scaffold).
 
 ## Ce que tu dois faire
 
@@ -25,7 +37,7 @@ Effectue un audit de maintenance complet du projet REWOLF SEO Editor. Vérifie l
 ### 1. Dépendances
 
 ```bash
-cd {{root}}
+cd /home/user/rewolf-seo-editor
 npm outdated
 ```
 

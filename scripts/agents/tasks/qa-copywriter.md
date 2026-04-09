@@ -23,23 +23,34 @@ et le code source. C'est intentionnel : tu testes la robustesse du moteur, pas l
 
 - N'initialise JAMAIS un nouveau projet.
 - N'écris pas de scaffold React/Vite depuis zéro.
-- Travaille UNIQUEMENT sur le repo existant à ce chemin :
+- Utilise UNIQUEMENT le repo officiel :
+  `https://github.com/NicolasRewolf/rewolf-seo-editor.git`
+
+## Bootstrap workspace (Managed Agents cloud)
 
 ```bash
-cd {{root}}
+set -e
+REPO_URL="https://github.com/NicolasRewolf/rewolf-seo-editor.git"
+WORKDIR="/home/user/rewolf-seo-editor"
+
+if [ ! -d "$WORKDIR/.git" ]; then
+  git clone "$REPO_URL" "$WORKDIR"
+fi
+
+cd "$WORKDIR"
 pwd
 ls
+npm ci
 ```
 
-- Si le dossier n'existe pas ou n'est pas un repo Git, ARRÊTE-TOI et renvoie un blocage clair.
-- Si `127.0.0.1:8787` est inaccessible depuis ton environnement, ARRÊTE-TOI et renvoie un blocage clair (ne pas improviser de scaffold).
+Si ce bootstrap échoue, ARRÊTE-TOI et renvoie un blocage clair (ne pas scaffold).
 
 ---
 
 ## Étape 0 — Vérification de l'environnement
 
 ```bash
-cd {{root}}
+cd /home/user/rewolf-seo-editor
 
 # Vérifier que le serveur tourne
 curl -s http://127.0.0.1:8787/api/health | head -5 || echo "SERVEUR ÉTEINT"
@@ -179,7 +190,7 @@ curl -s -X POST http://127.0.0.1:8787/api/ai/stream \
 Lire et exécuter directement l'analyseur SEO :
 
 ```bash
-cd {{root}}
+cd /home/user/rewolf-seo-editor
 node -e "
 import('./src/lib/seo/analyzer.js').then(({ analyzeSeo }) => {
   const result = analyzeSeo({
