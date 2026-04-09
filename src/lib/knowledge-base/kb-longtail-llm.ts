@@ -1,7 +1,22 @@
-import { LONGTAIL_EXTRACTION_PROMPT } from '@/lib/ai/prompts/workflow';
 import { generateAiText } from '@/lib/api/generate-ai';
-import { selectChunksForPrompt } from '@/lib/knowledge-base/kb-text';
+import { concatKbSources } from '@/lib/knowledge-base/kb-text';
 import type { KnowledgeBase } from '@/types/knowledge-base';
+
+const LONGTAIL_EXTRACTION_PROMPT = `Tu es un consultant SEO.
+
+OBJECTIF:
+- Proposer des expressions longue traine pertinentes autour du mot-cle principal.
+- Retourner STRICTEMENT un JSON avec la forme: {"keywords":[...]}.
+
+CONTRAINTE DE SORTIE:
+- Aucune explication hors JSON.
+- 10 a 25 expressions maximum.
+- Chaque entree:
+  - query: string
+  - intent: informational | transactional | commercial | navigational
+  - difficulty: low | med | high
+  - angle: string (raison de la pertinence)
+`;
 
 export type LongTailSuggestion = {
   query: string;
@@ -15,12 +30,12 @@ export async function extractLongTailWithLlm(args: {
   focusKeyword: string;
   provider: 'anthropic' | 'openai';
 }): Promise<LongTailSuggestion[]> {
-  const retrieval = selectChunksForPrompt(args.kb, args.focusKeyword, 4000);
+  const retrieval = concatKbSources(args.kb, 4000);
   const userBlock = [
     `Mot-clé principal : ${args.focusKeyword}`,
     '',
     '--- Extraits sources (BM25) ---',
-    retrieval.text,
+    retrieval,
     '',
     'Retourne UNIQUEMENT le JSON.',
   ].join('\n');
