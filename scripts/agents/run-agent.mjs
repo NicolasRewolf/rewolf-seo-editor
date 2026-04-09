@@ -208,7 +208,6 @@ try {
   const session = await apiPost('/v1/sessions', {
     model: MODEL,
     system: systemPrompt,
-    max_turns: 40,
   });
 
   const sessionId = session.id;
