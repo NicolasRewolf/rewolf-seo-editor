@@ -16,7 +16,8 @@
     "agent:test:fix": "node scripts/agents/run-agent.mjs --task test-fix",
     "agent:feature": "node scripts/agents/run-agent.mjs --task feature",
     "agent:maintain": "node scripts/agents/run-agent.mjs --task maintain",
-    "agent:qa": "node scripts/agents/run-agent.mjs --task qa-copywriter"
+    "agent:qa": "node scripts/agents/run-agent.mjs --task qa-copywriter",
+    "agent:benchmark": "node scripts/agents/run-agent.mjs --task benchmark"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.66",
