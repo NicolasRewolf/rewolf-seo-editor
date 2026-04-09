@@ -17,6 +17,8 @@ Le projet intègre **Claude Managed Agents** comme outil de développement (cons
 | `npm run agent:test:fix -- --desc "$(npm test 2>&1)"` | Corrige les tests en échec |
 | `npm run agent:feature -- --desc "description de la feature"` | Implémente une feature |
 | `npm run agent:maintain` | Audit dépendances + qualité code |
+| `npm run agent:qa -- --desc "mot-clé"` | Simule un copywriter A→Z et remonte les frictions |
+| `npm run agent:benchmark -- --desc "<url ou sujet>"` | Benchmark contenu concurrent vs génération |
 
 ### Exemples
 
@@ -32,6 +34,12 @@ npm run agent:feature -- --desc "Ajouter le score Gunning Fog à l'analyse de li
 
 # Audit de maintenance complet
 npm run agent:maintain
+
+# QA copywriter
+npm run agent:qa -- --desc "meilleur logiciel comptabilité PME"
+
+# Benchmark de contenu
+npm run agent:benchmark -- --desc "https://example.com/article"
 ```
 
 ### Architecture des scripts
@@ -44,8 +52,27 @@ scripts/agents/
     ├── test-generate.md   # Prompt : génération de tests
     ├── test-fix.md        # Prompt : correction de tests
     ├── feature.md         # Prompt : implémentation de feature
-    └── maintain.md        # Prompt : audit de maintenance
+    ├── maintain.md         # Prompt : audit de maintenance
+    ├── qa-copywriter.md    # Prompt : simulation copywriter
+    └── benchmark.md        # Prompt : benchmark article
 ```
+
+### Migration Managed Agents (doc officielle)
+
+Le flux est aligné sur la doc Anthropic :
+
+1. `POST /v1/environments`
+2. `POST /v1/agents` (avec `tools: [{ type: "agent_toolset_20260401" }]`)
+3. `POST /v1/sessions` (avec `agent` + `environment_id`)
+4. `POST /v1/sessions/:id/events` (format `events: [{ type: "user.message", ... }]`)
+5. `GET /v1/sessions/:id/events/stream`
+
+Notes :
+- Le script CLI archive l'agent créé en fin d'exécution (sauf `--keep-agent`).
+- La route serveur `/api/agent/session` réutilise un agent/environment en mémoire.
+- Pour forcer la réutilisation entre redémarrages serveur, vous pouvez définir :
+  - `ANTHROPIC_MANAGED_AGENT_ID`
+  - `ANTHROPIC_MANAGED_ENVIRONMENT_ID`
 
 ### API serveur (Axe 3 — tâches longues depuis l'UI)
 

@@ -16,12 +16,19 @@ import { z } from 'zod';
 const ANTHROPIC_API_BASE = 'https://api.anthropic.com';
 const BETA_HEADER = 'managed-agents-2026-04-01';
 const MODEL = 'claude-sonnet-4-6';
+const AGENT_TOOLSET_TYPE = 'agent_toolset_20260401';
+const DEFAULT_AGENT_NAME = 'rewolf-seo-agent';
 
 /** Prompt système injecté pour les sessions créées depuis l'éditeur. */
 const AGENT_SYSTEM_PROMPT = `Tu es un assistant SEO expert pour REWOLF SEO Editor.
 Tu aides à rédiger, optimiser et enrichir des articles SEO en français.
 Respecte toujours les consignes de l'utilisateur et produis du contenu optimisé
 pour les moteurs de recherche français.`;
+
+let cachedAgentId: string | null =
+  process.env.ANTHROPIC_MANAGED_AGENT_ID?.trim() || null;
+let cachedEnvironmentId: string | null =
+  process.env.ANTHROPIC_MANAGED_ENVIRONMENT_ID?.trim() || null;
 
 const sessionCreateSchema = z.object({
   /** Description de la tâche à confier à l'agent */
@@ -48,6 +55,63 @@ function getAnthropicHeaders(apiKey: string): Record<string, string> {
   };
 }
 
+async function anthropicPost<T>(
+  apiKey: string,
+  path: string,
+  body: unknown
+): Promise<{ ok: true; data: T } | { ok: false; status: number; text: string }> {
+  const res = await fetch(`${ANTHROPIC_API_BASE}${path}`, {
+    method: 'POST',
+    headers: getAnthropicHeaders(apiKey),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, text: await res.text() };
+  }
+  return { ok: true, data: (await res.json()) as T };
+}
+
+async function ensureEnvironmentId(apiKey: string): Promise<string> {
+  if (cachedEnvironmentId) return cachedEnvironmentId;
+  const envName = `rewolf-seo-editor-api-${Date.now()}`;
+  const created = await anthropicPost<{ id: string }>(apiKey, '/v1/environments', {
+    name: envName,
+    config: { type: 'cloud', networking: { type: 'unrestricted' } },
+  });
+  if (!created.ok) {
+    throw new Error(
+      `Erreur création environment ${created.status}: ${created.text}`
+    );
+  }
+  cachedEnvironmentId = created.data.id;
+  return cachedEnvironmentId;
+}
+
+async function createAgentId(apiKey: string, systemPrompt: string, suffix: string) {
+  const created = await anthropicPost<{ id: string }>(apiKey, '/v1/agents', {
+    name: `${DEFAULT_AGENT_NAME}-${suffix}`,
+    description: 'Managed Agent SEO pour REWOLF SEO Editor',
+    model: MODEL,
+    system: systemPrompt,
+    tools: [{ type: AGENT_TOOLSET_TYPE }],
+    metadata: {
+      project: 'rewolf-seo-editor',
+      source: 'server/routes/agent.ts',
+      role: 'seo-assistant',
+    },
+  });
+  if (!created.ok) {
+    throw new Error(`Erreur création agent ${created.status}: ${created.text}`);
+  }
+  return created.data.id;
+}
+
+async function ensureReusableAgentId(apiKey: string): Promise<string> {
+  if (cachedAgentId) return cachedAgentId;
+  cachedAgentId = await createAgentId(apiKey, AGENT_SYSTEM_PROMPT, 'default');
+  return cachedAgentId;
+}
+
 export const agentRoutes = new Hono();
 
 /**
@@ -67,6 +131,7 @@ agentRoutes.post('/session', async (c) => {
     return c.json({ error: 'Corps JSON invalide' }, 400);
   }
 
+  const isCustomAgent = typeof body.systemOverride === 'string';
   const systemPrompt = body.systemOverride ?? AGENT_SYSTEM_PROMPT;
 
   // Construire le prompt utilisateur avec le contexte si fourni
@@ -84,42 +149,55 @@ agentRoutes.post('/session', async (c) => {
   }
 
   try {
-    // 1. Créer la session
-    const createRes = await fetch(`${ANTHROPIC_API_BASE}/v1/sessions`, {
-      method: 'POST',
-      headers: getAnthropicHeaders(apiKey),
-      body: JSON.stringify({
-        model: MODEL,
-        system: systemPrompt,
-        max_turns: 20,
-      }),
-    });
+    const environmentId = await ensureEnvironmentId(apiKey);
+    const agentId = isCustomAgent
+      ? await createAgentId(apiKey, systemPrompt, 'custom')
+      : await ensureReusableAgentId(apiKey);
 
+    // 1. Créer la session (agent + environment), conforme Managed Agents.
+    const createRes = await anthropicPost<{ id: string }>(apiKey, '/v1/sessions', {
+      agent: agentId,
+      environment_id: environmentId,
+    });
     if (!createRes.ok) {
-      const text = await createRes.text();
-      console.error('[agent] Erreur création session :', createRes.status, text);
+      console.error(
+        '[agent] Erreur création session :',
+        createRes.status,
+        createRes.text
+      );
       return c.json({ error: `Erreur API Anthropic : ${createRes.status}` }, 502);
     }
+    const sessionId = createRes.data.id;
 
-    const session = (await createRes.json()) as { id: string };
-
-    // 2. Envoyer l'événement utilisateur initial
-    const eventRes = await fetch(
-      `${ANTHROPIC_API_BASE}/v1/sessions/${session.id}/events`,
+    // 2. Envoyer l'événement utilisateur initial au format "events".
+    const eventRes = await anthropicPost(
+      apiKey,
+      `/v1/sessions/${sessionId}/events`,
       {
-        method: 'POST',
-        headers: getAnthropicHeaders(apiKey),
-        body: JSON.stringify({ type: 'user', content: userContent }),
+        events: [
+          {
+            type: 'user.message',
+            content: [{ type: 'text', text: userContent }],
+          },
+        ],
       }
     );
-
     if (!eventRes.ok) {
-      const text = await eventRes.text();
-      console.error('[agent] Erreur envoi événement :', eventRes.status, text);
+      console.error(
+        '[agent] Erreur envoi événement :',
+        eventRes.status,
+        eventRes.text
+      );
       return c.json({ error: `Erreur envoi tâche : ${eventRes.status}` }, 502);
     }
 
-    return c.json({ sessionId: session.id, status: 'running' });
+    return c.json({
+      sessionId,
+      status: 'running',
+      agentId,
+      environmentId,
+      reusedAgent: !isCustomAgent,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erreur inconnue';
     console.error('[agent] Erreur :', msg);

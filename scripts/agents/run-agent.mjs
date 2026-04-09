@@ -46,6 +46,7 @@ const hasFlag = (flag) => args.includes(flag);
 const task = getArg('--task');
 const desc = getArg('--desc') ?? '';
 const file = getArg('--file') ?? '';
+const keepAgent = hasFlag('--keep-agent');
 
 if (hasFlag('--help') || hasFlag('-h')) {
   console.log(`
@@ -73,6 +74,40 @@ if (!validTasks.includes(task)) {
   process.exit(1);
 }
 
+const AGENT_PROFILES = {
+  'test-generate': {
+    id: 'test-maintainer',
+    name: 'rewolf-test-maintainer',
+    description: 'Generates and fixes test suites for REWOLF SEO Editor.',
+  },
+  'test-fix': {
+    id: 'test-maintainer',
+    name: 'rewolf-test-maintainer',
+    description: 'Generates and fixes test suites for REWOLF SEO Editor.',
+  },
+  feature: {
+    id: 'feature-implementer',
+    name: 'rewolf-feature-implementer',
+    description: 'Implements scoped product features in the REWOLF codebase.',
+  },
+  maintain: {
+    id: 'release-maintainer',
+    name: 'rewolf-release-maintainer',
+    description: 'Performs maintenance audits and release readiness checks.',
+  },
+  'qa-copywriter': {
+    id: 'seo-qa-copywriter',
+    name: 'rewolf-seo-qa-copywriter',
+    description: 'Runs end-to-end SEO copywriter QA flows and reports pain points.',
+  },
+  benchmark: {
+    id: 'seo-benchmark-analyst',
+    name: 'rewolf-seo-benchmark-analyst',
+    description: 'Compares generated content against benchmark competitor articles.',
+  },
+};
+const agentProfile = AGENT_PROFILES[task];
+
 // ---------------------------------------------------------------------------
 // Charger les prompts
 // ---------------------------------------------------------------------------
@@ -85,11 +120,20 @@ try {
   process.exit(1);
 }
 
-const taskPrompt = taskTemplate
-  .replace(/\{\{desc\}\}/g, desc)
-  .replace(/\{\{file\}\}/g, file)
-  .replace(/\{\{root\}\}/g, ROOT)
-  .trim();
+function renderTemplate(template, vars) {
+  const withConditionals = template.replace(
+    /\{\{#if\s+([a-zA-Z0-9_]+)\}\}([\s\S]*?)(?:\{\{else\}\}([\s\S]*?))?\{\{\/if\}\}/g,
+    (_match, key, truthy, falsy = '') => {
+      const v = vars[key];
+      return String(v ?? '').trim() ? truthy : falsy;
+    }
+  );
+  return withConditionals.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_match, key) =>
+    String(vars[key] ?? '')
+  );
+}
+
+const taskPrompt = renderTemplate(taskTemplate, { desc, file, root: ROOT }).trim();
 
 // ---------------------------------------------------------------------------
 // API Key
@@ -147,6 +191,17 @@ async function apiDelete(path) {
   if (!res.ok && res.status !== 204) {
     const text = await res.text().catch(() => '');
     console.warn(`[agent] Nettoyage ${path} → ${res.status}: ${text}`);
+  }
+}
+
+async function apiArchive(path) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: baseHeaders,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    console.warn(`[agent] Archive ${path} → ${res.status}: ${text}`);
   }
 }
 
@@ -220,6 +275,7 @@ console.log(`[agent] Modèle : ${MODEL}`);
 console.log('[agent] Démarrage…');
 
 let environmentId = null;
+let agentId = null;
 
 try {
   // 1. Créer un environnement cloud (requis par l'API Managed Agents)
@@ -239,11 +295,19 @@ try {
   //    model/system vivent sur l'agent, PAS sur la session
   console.log('[agent] Création de l\'agent…');
   const agent = await apiPost('/v1/agents', {
-    name: `rewolf-${task}`,
+    name: agentProfile.name,
+    description: agentProfile.description,
     model: MODEL,
     system: systemPrompt,
+    tools: [{ type: 'agent_toolset_20260401' }],
+    metadata: {
+      project: 'rewolf-seo-editor',
+      profile: agentProfile.id,
+      task,
+      source: 'scripts/agents/run-agent.mjs',
+    },
   });
-  const agentId = agent.id;
+  agentId = agent.id;
   console.log(`[agent] Agent : ${agentId}`);
 
   // 3. Créer la session liée à l'agent + l'environnement
@@ -289,6 +353,9 @@ try {
   console.error(`\n[agent] Erreur : ${err.message}`);
   process.exit(1);
 } finally {
+  if (agentId && !keepAgent) {
+    await apiArchive(`/v1/agents/${agentId}/archive`);
+  }
   // Nettoyage : supprimer l'environnement pour rester sous la limite de 5
   if (environmentId) {
     await apiDelete(`/v1/environments/${environmentId}`);
