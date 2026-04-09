@@ -16,7 +16,7 @@
 
     /* Linting */
     "noUnusedLocals": true,
-    "noUnusedParameters": false,
+    "noUnusedParameters": true,
     "erasableSyntaxOnly": true
   },
   "include": ["src"]
