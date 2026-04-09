@@ -63,7 +63,7 @@ app.use(
     origin: (origin) => {
       if (!origin) return '*';
       if (isDevBrowserOrigin(origin)) return origin;
-      return false;
+      return undefined;
     },
     allowMethods: ['GET', 'POST', 'PUT', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
