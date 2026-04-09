@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-import { agentRoutes } from '../routes/agent';
+import { agentRoutes } from '../modules/agent/agent.route';
 import { aiRoutes } from '../modules/ai/ai.route';
 import { articlesRoutes } from '../modules/articles/articles.route';
 import { readerRoutes } from '../modules/reader/reader.route';
